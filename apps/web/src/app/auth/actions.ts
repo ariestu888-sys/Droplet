@@ -10,7 +10,7 @@ export type AuthFormState = {
 };
 
 // Where to send people after they sign in.
-const AFTER_AUTH_PATH = "/account";
+const AFTER_AUTH_PATH = "/home";
 
 async function getOrigin() {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;

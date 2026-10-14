@@ -8,6 +8,7 @@ import { env } from "./env";
 import { ApiException } from "./lib/errors";
 import { health } from "./routes/health";
 import { me } from "./routes/me";
+import { organizations } from "./routes/organizations";
 
 export const app = new OpenAPIHono({
   // Request validation failures use the same error shape as everything else.
@@ -37,6 +38,7 @@ app.use(
 const v1 = new OpenAPIHono();
 v1.route("/", health);
 v1.route("/", me);
+v1.route("/", organizations);
 app.route("/v1", v1);
 
 app.openAPIRegistry.registerComponent("securitySchemes", "Bearer", {

@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { DropletApiError } from "@droplet/shared";
-import { AuthShell } from "@/components/auth/auth-shell";
-import { signOut } from "@/app/auth/actions";
+import { PageHeader } from "@/components/app-shell/app-shell";
 import { createServerApi } from "@/lib/api/server";
 import { NameForm } from "./name-form";
 
@@ -51,15 +50,13 @@ function Detail({ label, value }: { label: string; value: string }) {
 
 export default function AccountPage() {
   return (
-    <AuthShell title="Your account" subtitle="You're signed in to Droplet.">
-      <Suspense fallback={<p className="text-sm text-subtle">Loading your details…</p>}>
-        <AccountDetails />
-      </Suspense>
-      <form action={signOut} className="mt-6">
-        <button type="submit" className="dr-btn-secondary w-full">
-          Log out
-        </button>
-      </form>
-    </AuthShell>
+    <div className="max-w-[640px]">
+      <PageHeader title="Account" subtitle="Your Droplet profile and sign-in details." />
+      <div className="dr-card">
+        <Suspense fallback={<p className="text-sm text-subtle">Loading your details…</p>}>
+          <AccountDetails />
+        </Suspense>
+      </div>
+    </div>
   );
 }

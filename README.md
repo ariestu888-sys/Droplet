@@ -42,6 +42,14 @@ Droplet is built as three tiers, so the website and a future mobile app share on
 
 Other scripts from the root: `npm run build`, `npm run lint`, `npm run typecheck`.
 
+## Database
+
+Schema changes live in `supabase/migrations/` as SQL files, applied in filename order. To apply one, paste it into the Supabase dashboard's **SQL Editor** and run it (or use the [Supabase CLI](https://supabase.com/docs/guides/cli): `supabase link`, then `supabase db push`).
+
+- `20261014000000_organizations.sql`: `organizations` and `organization_members` tables, row-level security (people only see organizations they belong to), and the `create_organization` function the API calls.
+- `20261014010000_organization_details.sql`: organization type (a starter list plus custom types people add), ZIP code, address, Discord and website links, and logos (stored in the public `organization-logos` Storage bucket; only an organization's owners and admins can upload).
+- `20261014020000_update_organization.sql`: the `update_organization` function, so owners and admins can edit their organization's details.
+
 ## The API
 
 | Method | Path | Auth | What it does |
@@ -49,6 +57,13 @@ Other scripts from the root: `npm run build`, `npm run lint`, `npm run typecheck
 | GET | `/v1/health` | — | API and Supabase status |
 | GET | `/v1/me` | Bearer | The signed-in user's profile |
 | PATCH | `/v1/me` | Bearer | Update the signed-in user's name |
+| GET | `/v1/organizations` | Bearer | Organizations the user belongs to, with their role |
+| POST | `/v1/organizations` | Bearer | Create an organization (the user becomes its owner) |
+| PUT | `/v1/organizations/{id}/logo` | Bearer | Upload or replace its logo (multipart, field `file`; PNG, JPEG or WebP up to 2 MB) |
+| GET | `/v1/organizations/{id}` | Bearer | One organization the user belongs to |
+| PATCH | `/v1/organizations/{id}` | Bearer | Edit its details (owners and admins; send `null` to clear a field) |
+| DELETE | `/v1/organizations/{id}/logo` | Bearer | Remove its logo (owners and admins) |
+| GET | `/v1/organization-types` | Bearer | Organization types: the starter list plus custom ones |
 
 The full, live specification is at `/v1/openapi.json`, with interactive docs at `/docs`.
 
@@ -77,7 +92,14 @@ Cache Components is enabled, so anything that reads the session (via `cookies()`
 
 ### Accounts
 
-People can create an account with email and password (`/signup`) or with Google, and log in at `/login`. `/account` shows their profile and lets them change their name, through the API.
+People can create an account with email and password (`/signup`) or with Google, and log in at `/login`. After signing in they land on `/home`.
+
+Signed-in pages live in `src/app/(app)/` and share a menu (a navy sidebar on wide screens, a top bar on phones), defined in `src/components/app-shell/nav-items.ts`:
+
+- **Create Organization** (`/organizations/new`)
+- **Home** (`/home`): greeting and the user's organizations; each opens its page at `/organizations/<id>`, which owners and admins can edit at `/organizations/<id>/edit`
+- **Account** (`/account`): profile, and changing their name
+- **Log out**
 
 - `src/app/auth/actions.ts`: sign up, log in, Google sign-in and log out
 - `src/app/auth/callback/route.ts`: where Supabase returns people after Google sign-in or the email confirmation link

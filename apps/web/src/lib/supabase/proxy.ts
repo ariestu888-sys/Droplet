@@ -37,14 +37,14 @@ export async function updateSession(request: NextRequest) {
     return redirectKeepingCookies(request, response, "/login");
   }
   if (signedIn && SIGNED_OUT_ONLY_PATHS.includes(pathname)) {
-    return redirectKeepingCookies(request, response, "/account");
+    return redirectKeepingCookies(request, response, "/home");
   }
 
   return response;
 }
 
-const PROTECTED_PATHS = ["/account"];
-const SIGNED_OUT_ONLY_PATHS = ["/login", "/signup"];
+const PROTECTED_PATHS = ["/home", "/account", "/organizations"];
+const SIGNED_OUT_ONLY_PATHS = ["/", "/login", "/signup"];
 
 // Carry over any refreshed session cookies, or the user gets signed out.
 function redirectKeepingCookies(

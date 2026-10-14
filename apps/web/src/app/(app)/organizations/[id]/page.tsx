@@ -1,0 +1,129 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
+import { Suspense } from "react";
+import { DropletApiError, type Organization } from "@droplet/shared";
+import { ChatIcon, GlobeIcon, MapPinIcon, PencilIcon, UsersIcon } from "@/components/icons";
+import { OrgLogo } from "@/components/org-logo";
+import { createServerApi } from "@/lib/api/server";
+import { isUuid } from "@/lib/uuid";
+
+export const metadata: Metadata = { title: "Organization · Droplet" };
+
+export default function OrganizationPage({ params }: PageProps<"/organizations/[id]">) {
+  return (
+    <div className="max-w-[960px]">
+      <Link href="/home" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
+        <span aria-hidden>←</span> Home
+      </Link>
+      <Suspense fallback={<p className="text-sm text-subtle">Loading organization…</p>}>
+        <OrganizationDetails params={params} />
+      </Suspense>
+    </div>
+  );
+}
+
+
+async function OrganizationDetails({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  // Per-request: the Supabase client reads the clock while checking the session.
+  await connection();
+  if (!isUuid(id)) notFound();
+
+  let org: Organization;
+  try {
+    org = await (await createServerApi()).organizations.get(id);
+  } catch (err) {
+    if (err instanceof DropletApiError && err.status === 401) redirect("/login");
+    if (err instanceof DropletApiError && err.status === 404) notFound();
+    return (
+      <p role="alert" className="rounded-field bg-coral-tint px-4 py-3 text-sm font-semibold text-[#b8321f]">
+        Couldn&apos;t load this organization. Is the Droplet API running?
+      </p>
+    );
+  }
+
+  const location = [org.address, org.zipcode].filter(Boolean).join(", ");
+  const roleLabel = org.role === "owner" ? "Owner" : org.role === "admin" ? "Admin" : "Member";
+  const created = new Date(org.createdAt).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  return (
+    <>
+      <header className="mb-7 flex flex-wrap items-center gap-5">
+        <OrgLogo name={org.name} logoUrl={org.logoUrl} size={80} className="rounded-card" />
+        <div className="min-w-0 flex-1">
+          <h1 className="mb-2 text-[28px] leading-tight font-bold tracking-[-0.01em] break-words">{org.name}</h1>
+          <div className="flex flex-wrap gap-2">
+            <span className="dr-badge bg-droplet-tint text-[#0369a1]">{org.type}</span>
+            <span className="dr-badge bg-success-tint text-[#11743a]">
+              <UsersIcon size={13} />
+              You&apos;re {org.role === "member" ? "a member" : `an ${roleLabel.toLowerCase()}`}
+            </span>
+          </div>
+        </div>
+        {org.role !== "member" && (
+          <Link href={`/organizations/${org.id}/edit`} className="dr-btn-secondary px-5 py-2.5 text-sm">
+            <PencilIcon size={16} />
+            Edit
+          </Link>
+        )}
+      </header>
+
+      <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start gap-4 max-lg:grid-cols-1">
+        <section aria-labelledby="about-heading" className="dr-card p-[22px]">
+          <h2 id="about-heading" className="mb-3 text-base font-bold">About</h2>
+          {org.description ? (
+            <p className="text-[15px] leading-relaxed whitespace-pre-line text-body">{org.description}</p>
+          ) : (
+            <p className="text-sm text-subtle">No description yet.</p>
+          )}
+        </section>
+
+        <section aria-labelledby="details-heading" className="dr-card p-[22px]">
+          <h2 id="details-heading" className="mb-3 text-base font-bold">Details</h2>
+          <dl className="flex flex-col gap-3.5 text-sm">
+            <Detail icon={<MapPinIcon size={16} />} label="Location">
+              {location || <span className="text-subtle">Not set</span>}
+            </Detail>
+            <Detail icon={<GlobeIcon size={16} />} label="Website">
+              {org.websiteUrl ? (
+                <a href={org.websiteUrl} target="_blank" rel="noopener noreferrer" className="font-semibold break-all text-[#0369a1] hover:underline">
+                  {org.websiteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                </a>
+              ) : (
+                <span className="text-subtle">Not set</span>
+              )}
+            </Detail>
+            <Detail icon={<ChatIcon size={16} />} label="Discord">
+              {org.discordUrl ? (
+                <a href={org.discordUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#4752c4] hover:underline">
+                  Join the Discord
+                </a>
+              ) : (
+                <span className="text-subtle">Not set</span>
+              )}
+            </Detail>
+          </dl>
+          <p className="mt-4 border-t-2 border-divider pt-3.5 text-xs text-subtle">Created {created}</p>
+        </section>
+      </div>
+    </>
+  );
+}
+
+function Detail({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <span aria-hidden className="mt-0.5 text-subtle">{icon}</span>
+      <div className="min-w-0">
+        <dt className="text-xs font-bold tracking-[0.04em] text-subtle uppercase">{label}</dt>
+        <dd className="mt-0.5 text-ink">{children}</dd>
+      </div>
+    </div>
+  );
+}

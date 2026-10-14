@@ -1,4 +1,14 @@
-import type { ApiError, Health, Profile, UpdateProfile } from "./schemas";
+import type {
+  ApiError,
+  CreateOrganization,
+  Health,
+  Organization,
+  OrganizationList,
+  OrganizationTypeList,
+  Profile,
+  UpdateOrganization,
+  UpdateProfile,
+} from "./schemas";
 
 // A small typed client for the Droplet API, usable from the website (server
 // or browser) and from the mobile app.
@@ -28,12 +38,15 @@ export function createDropletApi({ baseUrl, getAccessToken, fetch: fetchImpl = f
     const headers: Record<string, string> = { Accept: "application/json" };
     const token = await getAccessToken?.();
     if (token) headers.Authorization = `Bearer ${token}`;
-    if (body !== undefined) headers["Content-Type"] = "application/json";
+
+    // FormData (file uploads) sets its own multipart Content-Type.
+    const isForm = typeof FormData !== "undefined" && body instanceof FormData;
+    if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
 
     const res = await fetchImpl(`${root}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     });
 
     const data = (await res.json().catch(() => null)) as T | ApiError | null;
@@ -49,6 +62,23 @@ export function createDropletApi({ baseUrl, getAccessToken, fetch: fetchImpl = f
     me: {
       get: () => request<Profile>("GET", "/v1/me"),
       update: (input: UpdateProfile) => request<Profile>("PATCH", "/v1/me", input),
+    },
+    organizations: {
+      list: () => request<OrganizationList>("GET", "/v1/organizations"),
+      get: (id: string) => request<Organization>("GET", `/v1/organizations/${encodeURIComponent(id)}`),
+      create: (input: CreateOrganization) => request<Organization>("POST", "/v1/organizations", input),
+      update: (id: string, input: UpdateOrganization) =>
+        request<Organization>("PATCH", `/v1/organizations/${encodeURIComponent(id)}`, input),
+      removeLogo: (id: string) => request<Organization>("DELETE", `/v1/organizations/${encodeURIComponent(id)}/logo`),
+      /** Upload or replace the logo: a PNG, JPEG or WebP image up to 2 MB. */
+      uploadLogo: (id: string, file: Blob, filename = "logo") => {
+        const form = new FormData();
+        form.append("file", file, filename);
+        return request<Organization>("PUT", `/v1/organizations/${encodeURIComponent(id)}/logo`, form);
+      },
+    },
+    organizationTypes: {
+      list: () => request<OrganizationTypeList>("GET", "/v1/organization-types"),
     },
   };
 }

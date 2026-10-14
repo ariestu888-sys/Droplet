@@ -41,7 +41,100 @@ export const UpdateProfileSchema = z
   })
   .meta({ id: "UpdateProfile" });
 
+export const OrganizationRoleSchema = z.enum(["owner", "admin", "member"]).meta({ id: "OrganizationRole" });
+
+// Field rules, shared so forms can check input the same way the API does.
+export const ZIPCODE_PATTERN = /^\d{5}(-\d{4})?$/;
+export const DISCORD_INVITE_PATTERN =
+  /^https:\/\/(www\.)?(discord\.gg|discord\.com\/invite|discordapp\.com\/invite)\/[A-Za-z0-9-]+\/?$/i;
+export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+export const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+
+export const OrganizationTypeSchema = z
+  .object({
+    id: z.number().int(),
+    name: z.string().meta({ example: "Esports club" }),
+    isPreset: z.boolean().meta({ description: "Part of Droplet's starter list, rather than added by a user." }),
+  })
+  .meta({ id: "OrganizationType" });
+
+export const OrganizationTypeListSchema = z
+  .object({ data: z.array(OrganizationTypeSchema) })
+  .meta({ id: "OrganizationTypeList" });
+
+export const OrganizationSchema = z
+  .object({
+    id: z.uuid(),
+    name: z.string().meta({ example: "Northfield Esports Club" }),
+    slug: z.string().meta({ description: "URL-friendly name, unique across Droplet.", example: "northfield-esports-club" }),
+    type: z.string().meta({ example: "Esports club" }),
+    description: z.string().nullable(),
+    zipcode: z.string().nullable().meta({ example: "60201" }),
+    address: z.string().nullable().meta({ example: "1200 Cedar Ave, Riverton" }),
+    discordUrl: z.string().nullable().meta({ example: "https://discord.gg/northfield" }),
+    websiteUrl: z.string().nullable().meta({ example: "https://northfieldesports.example" }),
+    logoUrl: z.string().nullable().meta({ description: "Public URL of the logo image." }),
+    role: OrganizationRoleSchema.meta({ description: "The signed-in user's role in this organization." }),
+    createdAt: z.iso.datetime({ offset: true }),
+  })
+  .meta({ id: "Organization" });
+
+export const OrganizationListSchema = z
+  .object({ data: z.array(OrganizationSchema) })
+  .meta({ id: "OrganizationList" });
+
+// Rules for each editable organization field, shared by create and update.
+const organizationFields = {
+  name: z.string().trim().min(2).max(80).meta({ example: "Northfield Esports Club" }),
+  type: z
+    .string()
+    .trim()
+    .min(2)
+    .max(40)
+    .meta({ description: "A type from GET /v1/organization-types, or a new custom type.", example: "Esports club" }),
+  description: z.string().trim().max(500).meta({ example: "Weekly tournaments for players of all levels." }),
+  zipcode: z.string().trim().regex(ZIPCODE_PATTERN, "Enter a 5-digit ZIP code, like 60201."),
+  address: z.string().trim().max(200),
+  discordUrl: z
+    .string()
+    .trim()
+    .regex(DISCORD_INVITE_PATTERN, "Enter a Discord invite link, like https://discord.gg/abc123."),
+  websiteUrl: z.httpUrl("Enter a full web address, starting with https://.").max(300),
+};
+
+export const CreateOrganizationSchema = z
+  .object({
+    name: organizationFields.name,
+    type: organizationFields.type,
+    description: organizationFields.description.optional(),
+    zipcode: organizationFields.zipcode.optional(),
+    address: organizationFields.address.optional(),
+    discordUrl: organizationFields.discordUrl.optional(),
+    websiteUrl: organizationFields.websiteUrl.optional(),
+  })
+  .meta({ id: "CreateOrganization" });
+
+// Only the fields sent change. Send null to clear an optional field.
+export const UpdateOrganizationSchema = z
+  .object({
+    name: organizationFields.name.optional(),
+    type: organizationFields.type.optional(),
+    description: organizationFields.description.nullable().optional(),
+    zipcode: organizationFields.zipcode.nullable().optional(),
+    address: organizationFields.address.nullable().optional(),
+    discordUrl: organizationFields.discordUrl.nullable().optional(),
+    websiteUrl: organizationFields.websiteUrl.nullable().optional(),
+  })
+  .meta({ id: "UpdateOrganization" });
+
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 export type Health = z.infer<typeof HealthSchema>;
 export type Profile = z.infer<typeof ProfileSchema>;
 export type UpdateProfile = z.infer<typeof UpdateProfileSchema>;
+export type OrganizationRole = z.infer<typeof OrganizationRoleSchema>;
+export type Organization = z.infer<typeof OrganizationSchema>;
+export type OrganizationList = z.infer<typeof OrganizationListSchema>;
+export type CreateOrganization = z.infer<typeof CreateOrganizationSchema>;
+export type UpdateOrganization = z.infer<typeof UpdateOrganizationSchema>;
+export type OrganizationType = z.infer<typeof OrganizationTypeSchema>;
+export type OrganizationTypeList = z.infer<typeof OrganizationTypeListSchema>;
