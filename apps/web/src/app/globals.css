@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+/*
+ * Droplet design tokens, taken from the "Droplet design concepts" canvas
+ * (https://claude.ai/artifact/AgD9WgeudUNxBdGm6JsnGc).
+ * Each token becomes a Tailwind utility, e.g. --color-droplet -> bg-droplet,
+ * text-droplet; --font-display -> font-display; --radius-card -> rounded-card.
+ */
+@theme {
+  /* Brand */
+  --color-droplet: #0ea5e9;
+  --color-droplet-tint: #eef9ff;
+  --color-droplet-tint-border: #d9eefb;
+  --color-coral: #ff6b57;
+  --color-coral-tint: #fff2ee;
+  --color-spark: #ffc93c;
+  --color-success: #16a34a;
+  --color-success-tint: #e7f9ee;
+
+  /* Text, darkest to lightest */
+  --color-ink: #1c2430;
+  --color-ink-soft: #3b3f49;
+  --color-body: #566070;
+  --color-muted: #6b7080;
+  --color-subtle: #8a8f9c;
+  --color-placeholder: #a6aab4;
+
+  /* Surfaces and lines */
+  --color-surface: #ffffff;
+  --color-canvas: #fafbfc;
+  --color-sky: #eff9ff;
+  --color-hover: #f0f6fb;
+  --color-line: #e4e8ee;
+  --color-line-soft: #eef1f5;
+  --color-divider: #f3f4f7;
+
+  /* Dashboard sidebar */
+  --color-navy: #0b2540;
+  --color-navy-hover: #163152;
+  --color-navy-muted: #8fafc8;
+
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-display: var(--font-fredoka), system-ui, sans-serif;
+
+  --radius-field: 14px;
+  --radius-panel: 20px;
+  --radius-card: 22px;
+  --radius-sheet: 24px;
+
+  --shadow-card-hover: 0 16px 30px -12px rgb(28 36 48 / 0.14);
+  --shadow-sheet: 0 20px 40px -24px rgb(11 37 64 / 0.2);
+  --shadow-float: 0 30px 60px -20px rgb(11 37 64 / 0.4);
+
+  --animate-pulse-dot: dr-pulse 1.6s ease-in-out infinite;
+  --animate-wiggle: dr-wiggle 0.5s ease-in-out;
+
+  @keyframes dr-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.55; }
+  }
+  @keyframes dr-wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-10deg); }
+    75% { transform: rotate(10deg); }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-surface font-sans text-ink antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-display;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  input, button, textarea, select {
+    font: inherit;
+  }
+}
+
+/* Reusable components from the design. */
+@layer components {
+  .dr-container {
+    @apply mx-auto box-border w-full max-w-[1180px] px-8 max-sm:px-4;
+  }
+
+  /* Buttons (all pill-shaped) */
+  .dr-btn-primary,
+  .dr-btn-secondary,
+  .dr-btn-ghost {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full font-bold transition-[transform,box-shadow,border-color,background-color] duration-150 ease-out;
+  }
+  .dr-btn-primary {
+    @apply bg-droplet px-[26px] py-3.5 text-[15px] text-white shadow-[0_8px_20px_-6px_var(--color-droplet)] hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-[0_14px_26px_-6px_var(--color-droplet)];
+  }
+  .dr-btn-secondary {
+    @apply border-2 border-line bg-surface px-6 py-3 text-[15px] text-ink hover:-translate-y-0.5 hover:border-ink;
+  }
+  .dr-btn-ghost {
+    @apply px-[18px] py-2.5 text-[15px] text-ink hover:bg-hover;
+  }
+
+  /* Cards */
+  .dr-card {
+    @apply rounded-card border-2 border-line-soft bg-surface p-7;
+  }
+  .dr-card-hover {
+    @apply transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-[3px] hover:shadow-card-hover;
+  }
+
+  /* Forms */
+  .dr-field-label {
+    @apply mb-1.5 block text-[13px] font-bold text-ink-soft;
+  }
+  .dr-input {
+    @apply box-border w-full rounded-field border-2 border-line bg-surface px-[15px] py-3 text-[14.5px] text-ink placeholder:text-placeholder focus:border-droplet focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--color-droplet)_16%,transparent)] focus:outline-none;
+  }
+  .dr-check-row {
+    @apply flex items-start gap-2.5 rounded-field border-2 border-line-soft px-[13px] py-3;
+  }
+  .dr-check-row input[type="checkbox"] {
+    @apply mt-0.5 size-[18px] shrink-0 accent-droplet;
+  }
+
+  /* Small pieces */
+  .dr-badge {
+    @apply inline-flex items-center gap-[5px] rounded-full px-[11px] py-[5px] text-[12.5px] font-bold;
+  }
+  .dr-icon-circle {
+    @apply flex size-[46px] items-center justify-center rounded-full;
+  }
+  .dr-live-dot {
+    @apply inline-block size-[7px] shrink-0 rounded-full animate-pulse-dot;
+  }
+  .dr-logo-mark {
+    @apply inline-flex origin-[65%_85%] hover:animate-wiggle;
+  }
+}

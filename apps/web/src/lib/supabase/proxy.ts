@@ -28,7 +28,34 @@ export async function updateSession(request: NextRequest) {
 
   // Don't run code between createServerClient and getClaims():
   // it revalidates the session and must happen first.
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
+  const signedIn = Boolean(data?.claims);
+  const { pathname } = request.nextUrl;
+
+  // Quick redirects only; pages still check the user themselves.
+  if (!signedIn && PROTECTED_PATHS.some((p) => pathname.startsWith(p))) {
+    return redirectKeepingCookies(request, response, "/login");
+  }
+  if (signedIn && SIGNED_OUT_ONLY_PATHS.includes(pathname)) {
+    return redirectKeepingCookies(request, response, "/account");
+  }
 
   return response;
+}
+
+const PROTECTED_PATHS = ["/account"];
+const SIGNED_OUT_ONLY_PATHS = ["/login", "/signup"];
+
+// Carry over any refreshed session cookies, or the user gets signed out.
+function redirectKeepingCookies(
+  request: NextRequest,
+  response: NextResponse,
+  pathname: string,
+) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  const redirect = NextResponse.redirect(url);
+  response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+  return redirect;
 }

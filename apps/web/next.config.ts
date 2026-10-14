@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Compile the shared workspace package, which ships TypeScript source.
+  transpilePackages: ["@droplet/shared"],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
