@@ -1,6 +1,5 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { bodyLimit } from "hono/body-limit";
-import type { PostgrestError } from "@supabase/supabase-js";
 import {
   ApiErrorSchema,
   CreateOrganizationSchema,
@@ -14,7 +13,7 @@ import {
   type OrganizationRole,
 } from "@droplet/shared";
 import { requireUser, type AuthVariables } from "../middleware/auth";
-import { ApiException } from "../lib/errors";
+import { ApiException, databaseError } from "../lib/errors";
 import type { UserClient } from "../lib/supabase";
 import { env } from "../env";
 
@@ -54,19 +53,6 @@ const toOrganization = (row: OrganizationRow, role: OrganizationRole): Organizat
   role,
   createdAt: row.created_at,
 });
-
-function databaseError(error: PostgrestError): ApiException {
-  // Missing table or function: a database migration hasn't been applied.
-  if (["PGRST202", "PGRST205", "42P01", "42883"].includes(error.code)) {
-    return new ApiException(503, "not_set_up", "Organizations aren't fully set up in the database yet.");
-  }
-  if (error.code === "42501") return new ApiException(403, "forbidden", "You can't change this organization.");
-  if (error.code === "22023" || error.code === "23514") {
-    return new ApiException(400, "invalid_request", error.message);
-  }
-  console.error(error);
-  return new ApiException(502, "database_error", "The database couldn't complete the request.");
-}
 
 // One organization, as seen by the signed-in user (null if they aren't a member).
 async function findOrganization(supabase: UserClient, userId: string, id: string) {

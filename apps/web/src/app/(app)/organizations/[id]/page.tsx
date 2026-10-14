@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { DropletApiError, type Organization } from "@droplet/shared";
-import { ChatIcon, GlobeIcon, MapPinIcon, PencilIcon, UsersIcon } from "@/components/icons";
+import { DropletApiError, type DropletEvent, type Organization } from "@droplet/shared";
+import { EventList } from "@/components/events/event-list";
+import { ChatIcon, GlobeIcon, MapPinIcon, PencilIcon, PlusIcon, UsersIcon } from "@/components/icons";
 import { OrgLogo } from "@/components/org-logo";
 import { createServerApi } from "@/lib/api/server";
 import { isUuid } from "@/lib/uuid";
@@ -75,14 +76,31 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
       </header>
 
       <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start gap-4 max-lg:grid-cols-1">
-        <section aria-labelledby="about-heading" className="dr-card p-[22px]">
-          <h2 id="about-heading" className="mb-3 text-base font-bold">About</h2>
-          {org.description ? (
-            <p className="text-[15px] leading-relaxed whitespace-pre-line text-body">{org.description}</p>
-          ) : (
-            <p className="text-sm text-subtle">No description yet.</p>
-          )}
-        </section>
+        <div className="flex min-w-0 flex-col gap-4">
+          <section aria-labelledby="about-heading" className="dr-card p-[22px]">
+            <h2 id="about-heading" className="mb-3 text-base font-bold">About</h2>
+            {org.description ? (
+              <p className="text-[15px] leading-relaxed whitespace-pre-line text-body">{org.description}</p>
+            ) : (
+              <p className="text-sm text-subtle">No description yet.</p>
+            )}
+          </section>
+
+          <section aria-labelledby="events-heading" className="dr-card p-[22px]">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 id="events-heading" className="text-base font-bold">Events</h2>
+              {org.role !== "member" && (
+                <Link href={`/organizations/${org.id}/events/new`} className="dr-btn-primary px-4 py-2.5 text-sm">
+                  <PlusIcon size={16} />
+                  Create event
+                </Link>
+              )}
+            </div>
+            <Suspense fallback={<p className="text-sm text-subtle">Loading events…</p>}>
+              <OrganizationEvents organizationId={org.id} canManage={org.role !== "member"} />
+            </Suspense>
+          </section>
+        </div>
 
         <section aria-labelledby="details-heading" className="dr-card p-[22px]">
           <h2 id="details-heading" className="mb-3 text-base font-bold">Details</h2>
@@ -113,6 +131,39 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
         </section>
       </div>
     </>
+  );
+}
+
+async function OrganizationEvents({ organizationId, canManage }: { organizationId: string; canManage: boolean }) {
+  // Per-request: "upcoming" and "past" depend on the current time.
+  await connection();
+  let events: DropletEvent[];
+  try {
+    events = (await (await createServerApi()).events.listForOrganization(organizationId)).data;
+  } catch (err) {
+    const notSetUp = err instanceof DropletApiError && err.code === "not_set_up";
+    return (
+      <p role="alert" className="rounded-field bg-coral-tint px-4 py-3 text-sm font-semibold text-[#b8321f]">
+        {notSetUp
+          ? "Events aren't set up in the database yet. Run the latest migration in supabase/migrations."
+          : "Couldn't load events."}
+      </p>
+    );
+  }
+
+  return (
+    <EventList
+      events={events}
+      emptyAction={
+        canManage ? (
+          <Link href={`/organizations/${organizationId}/events/new`} className="dr-btn-secondary px-5 py-2.5 text-sm">
+            Create the first event
+          </Link>
+        ) : (
+          <p className="text-sm text-muted">Events will show up here once they&apos;re announced.</p>
+        )
+      }
+    />
   );
 }
 

@@ -5,11 +5,10 @@ import {
   LOGO_TYPES,
   type CreateOrganization,
 } from "@droplet/shared";
+import { CUSTOM_TYPE } from "./form-constants";
 
 // Shared by the create and edit organization forms.
 
-// Value of the type dropdown's "add your own" option.
-export const CUSTOM_TYPE = "__custom__";
 
 type FieldName = keyof CreateOrganization;
 

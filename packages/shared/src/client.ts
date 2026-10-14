@@ -9,6 +9,7 @@ import type {
   UpdateOrganization,
   UpdateProfile,
 } from "./schemas";
+import type { CreateEvent, DropletEvent, EventList, EventTypeList } from "./events";
 
 // A small typed client for the Droplet API, usable from the website (server
 // or browser) and from the mobile app.
@@ -79,6 +80,21 @@ export function createDropletApi({ baseUrl, getAccessToken, fetch: fetchImpl = f
     },
     organizationTypes: {
       list: () => request<OrganizationTypeList>("GET", "/v1/organization-types"),
+    },
+    events: {
+      /** An organization's events, soonest first. */
+      listForOrganization: (organizationId: string) =>
+        request<EventList>("GET", `/v1/organizations/${encodeURIComponent(organizationId)}/events`),
+      create: (organizationId: string, input: CreateEvent) =>
+        request<DropletEvent>("POST", `/v1/organizations/${encodeURIComponent(organizationId)}/events`, input),
+      get: (id: string) => request<DropletEvent>("GET", `/v1/events/${encodeURIComponent(id)}`),
+      /** Replaces the event's details; optional fields left out are cleared. */
+      update: (id: string, input: CreateEvent) =>
+        request<DropletEvent>("PUT", `/v1/events/${encodeURIComponent(id)}`, input),
+      delete: (id: string) => request<null>("DELETE", `/v1/events/${encodeURIComponent(id)}`),
+    },
+    eventTypes: {
+      list: () => request<EventTypeList>("GET", "/v1/event-types"),
     },
   };
 }

@@ -49,6 +49,10 @@ Schema changes live in `supabase/migrations/` as SQL files, applied in filename 
 - `20261014000000_organizations.sql`: `organizations` and `organization_members` tables, row-level security (people only see organizations they belong to), and the `create_organization` function the API calls.
 - `20261014010000_organization_details.sql`: organization type (a starter list plus custom types people add), ZIP code, address, Discord and website links, and logos (stored in the public `organization-logos` Storage bucket; only an organization's owners and admins can upload).
 - `20261014020000_update_organization.sql`: the `update_organization` function, so owners and admins can edit their organization's details.
+- `20261015000000_events.sql`: `events` (visible to the organization's members) and `event_types` (starter list plus custom types), and the `create_event` function (owners and admins). Start and end are stored as exact moments plus the event's IANA time zone.
+- `20261015010000_event_optional_times.sql`: makes event start and end times optional (date-only events), replacing `create_event`.
+- `20261015020000_event_visibility.sql`: event visibility, chosen at creation. **Public**: the organization's members can see it and sign up. **Private**: members can see it; sign-up is by invitation. **Hidden**: only organizers (owners and admins) can see it, for events still being planned. Enforced by row-level security.
+- `20261016000000_update_delete_event.sql`: the `update_event` and `delete_event` functions (organizers only).
 
 ## The API
 
@@ -64,6 +68,12 @@ Schema changes live in `supabase/migrations/` as SQL files, applied in filename 
 | PATCH | `/v1/organizations/{id}` | Bearer | Edit its details (owners and admins; send `null` to clear a field) |
 | DELETE | `/v1/organizations/{id}/logo` | Bearer | Remove its logo (owners and admins) |
 | GET | `/v1/organization-types` | Bearer | Organization types: the starter list plus custom ones |
+| GET | `/v1/organizations/{id}/events` | Bearer | An organization's events, soonest first (members) |
+| POST | `/v1/organizations/{id}/events` | Bearer | Create an event (owners and admins); `startDate`/`endDate` plus optional `startTime`/`endTime`, local to `timezone` |
+| GET | `/v1/events/{id}` | Bearer | One event (members of its organization) |
+| PUT | `/v1/events/{id}` | Bearer | Replace an event's details, including visibility (organizers) |
+| DELETE | `/v1/events/{id}` | Bearer | Delete an event permanently (organizers) |
+| GET | `/v1/event-types` | Bearer | Event types: the starter list plus custom ones |
 
 The full, live specification is at `/v1/openapi.json`, with interactive docs at `/docs`.
 
@@ -97,7 +107,7 @@ People can create an account with email and password (`/signup`) or with Google,
 Signed-in pages live in `src/app/(app)/` and share a menu (a navy sidebar on wide screens, a top bar on phones), defined in `src/components/app-shell/nav-items.ts`:
 
 - **Create Organization** (`/organizations/new`)
-- **Home** (`/home`): greeting and the user's organizations; each opens its page at `/organizations/<id>`, which owners and admins can edit at `/organizations/<id>/edit`
+- **Home** (`/home`): greeting and the user's organizations; each opens its page at `/organizations/<id>`, which owners and admins can edit at `/organizations/<id>/edit`. Organization pages list events; owners and admins create them at `/organizations/<id>/events/new`, and each event has a page at `/events/<id>`, which organizers can edit at `/events/<id>/edit` or delete
 - **Account** (`/account`): profile, and changing their name
 - **Log out**
 

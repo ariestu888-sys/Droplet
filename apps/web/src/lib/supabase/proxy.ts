@@ -43,7 +43,7 @@ export async function updateSession(request: NextRequest) {
   return response;
 }
 
-const PROTECTED_PATHS = ["/home", "/account", "/organizations"];
+const PROTECTED_PATHS = ["/home", "/account", "/organizations", "/events"];
 const SIGNED_OUT_ONLY_PATHS = ["/", "/login", "/signup"];
 
 // Carry over any refreshed session cookies, or the user gets signed out.
