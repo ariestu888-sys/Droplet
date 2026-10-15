@@ -1,10 +1,7 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { bodyLimit } from "hono/body-limit";
 import {
   ApiErrorSchema,
   CreateOrganizationSchema,
-  LOGO_MAX_BYTES,
-  LOGO_TYPES,
   OrganizationListSchema,
   OrganizationSchema,
   OrganizationTypeListSchema,
@@ -14,10 +11,8 @@ import {
 } from "@droplet/shared";
 import { requireUser, type AuthVariables } from "../middleware/auth";
 import { ApiException, databaseError } from "../lib/errors";
+import { LOGO_BUCKET, LOGO_UPLOAD_DESCRIPTION, logoBodyLimit, logoUploadBody, publicLogoUrl, readLogoUpload } from "../lib/images";
 import type { UserClient } from "../lib/supabase";
-import { env } from "../env";
-
-const LOGO_BUCKET = "organization-logos";
 
 type OrganizationRow = {
   id: string;
@@ -36,9 +31,6 @@ type OrganizationRow = {
 const ORGANIZATION_COLUMNS =
   "id, name, slug, description, zipcode, address, discord_url, website_url, logo_path, created_at, type:organization_types(name)";
 
-const logoUrl = (path: string | null) =>
-  path ? `${env.SUPABASE_URL}/storage/v1/object/public/${LOGO_BUCKET}/${path}` : null;
-
 const toOrganization = (row: OrganizationRow, role: OrganizationRole): Organization => ({
   id: row.id,
   name: row.name,
@@ -49,7 +41,7 @@ const toOrganization = (row: OrganizationRow, role: OrganizationRole): Organizat
   address: row.address,
   discordUrl: row.discord_url,
   websiteUrl: row.website_url,
-  logoUrl: logoUrl(row.logo_path),
+  logoUrl: publicLogoUrl(row.logo_path),
   role,
   createdAt: row.created_at,
 });
@@ -67,17 +59,6 @@ async function findOrganization(supabase: UserClient, userId: string, id: string
   if (error) throw databaseError(error);
   return data ? toOrganization(data.organization, data.role) : null;
 }
-
-// Checks the file's first bytes really are a PNG, JPEG or WebP image.
-function sniffImageType(bytes: Uint8Array): (typeof LOGO_TYPES)[number] | null {
-  const starts = (sig: number[], offset = 0) => sig.every((b, i) => bytes[offset + i] === b);
-  if (starts([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
-  if (starts([0xff, 0xd8, 0xff])) return "image/jpeg";
-  if (starts([0x52, 0x49, 0x46, 0x46]) && starts([0x57, 0x45, 0x42, 0x50], 8)) return "image/webp";
-  return null;
-}
-
-const EXTENSIONS = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" } as const;
 
 const errorResponse = (description: string) => ({
   description,
@@ -200,27 +181,15 @@ const uploadLogo = createRoute({
   path: "/organizations/{id}/logo",
   tags: ["Organizations"],
   summary: "Upload or replace an organization's logo (owners and admins)",
-  description: `A PNG, JPEG or WebP image of up to ${LOGO_MAX_BYTES / 1024 / 1024} MB, sent as multipart/form-data in a field named \`file\`.`,
+  description: LOGO_UPLOAD_DESCRIPTION,
   security: [{ Bearer: [] }],
   middleware: [
     requireUser,
-    bodyLimit({
-      maxSize: LOGO_MAX_BYTES + 64 * 1024,
-      onError: () => {
-        throw new ApiException(413, "file_too_large", "Logos can be up to 2 MB.");
-      },
-    }),
+    logoBodyLimit,
   ] as const,
   request: {
     params: IdParams,
-    body: {
-      required: true,
-      content: {
-        "multipart/form-data": {
-          schema: z.object({ file: z.any().openapi({ type: "string", format: "binary" }) }),
-        },
-      },
-    },
+    body: logoUploadBody,
   },
   responses: {
     200: { description: "The organization, with its new logo", content: { "application/json": { schema: OrganizationSchema } } },
@@ -285,19 +254,12 @@ export const organizations = new OpenAPIHono<{ Variables: AuthVariables }>()
     const { id } = c.req.valid("param");
     const { file } = c.req.valid("form");
 
-    if (!(file instanceof File)) {
-      throw new ApiException(400, "invalid_request", "Send the image in a form field named \"file\".");
-    }
-    if (file.size > LOGO_MAX_BYTES) throw new ApiException(413, "file_too_large", "Logos can be up to 2 MB.");
-
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const contentType = sniffImageType(bytes);
-    if (!contentType) throw new ApiException(400, "invalid_image", "Logos must be PNG, JPEG or WebP images.");
+    const { bytes, contentType, extension } = await readLogoUpload(file);
 
     const existing = await findManageableOrganization(c.var.supabase, c.var.userId, id);
 
     // A new file name each time, so browsers and CDNs never show a stale logo.
-    const path = `${id}/logo-${Date.now()}.${EXTENSIONS[contentType]}`;
+    const path = `${id}/logo-${Date.now()}.${extension}`;
     const storage = c.var.supabase.storage.from(LOGO_BUCKET);
     const upload = await storage.upload(path, bytes, { contentType, upsert: false });
     if (upload.error) {
@@ -315,7 +277,7 @@ export const organizations = new OpenAPIHono<{ Variables: AuthVariables }>()
     }
     if (typeof oldPath === "string" && oldPath !== path) await storage.remove([oldPath]);
 
-    return c.json({ ...existing, logoUrl: logoUrl(path) }, 200);
+    return c.json({ ...existing, logoUrl: publicLogoUrl(path) }, 200);
   })
   .openapi(updateOrganization, async (c) => {
     const { id } = c.req.valid("param");

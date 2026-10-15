@@ -139,3 +139,52 @@
     @apply inline-flex origin-[65%_85%] hover:animate-wiggle;
   }
 }
+
+/* Organizer-written HTML on splash pages (sanitized by the API). */
+@layer components {
+  .dr-prose {
+    @apply text-[16px] leading-relaxed text-body;
+  }
+  .dr-prose > * + * {
+    @apply mt-4;
+  }
+  .dr-prose :is(h1, h2, h3, h4, h5, h6) {
+    @apply font-display font-bold tracking-[-0.01em] text-ink;
+  }
+  .dr-prose h1 { @apply mt-8 text-[32px] leading-tight; }
+  .dr-prose h2 { @apply mt-8 text-[26px] leading-tight; }
+  .dr-prose h3 { @apply mt-6 text-[21px]; }
+  .dr-prose :is(h4, h5, h6) { @apply mt-5 text-[17px]; }
+  .dr-prose > :first-child { @apply mt-0; }
+  .dr-prose a { @apply font-semibold text-[#0369a1] underline underline-offset-2 hover:text-droplet; }
+  .dr-prose :is(ul, ol) { @apply pl-6; }
+  .dr-prose ul { @apply list-disc; }
+  .dr-prose ol { @apply list-decimal; }
+  .dr-prose li + li { @apply mt-1.5; }
+  .dr-prose blockquote { @apply border-l-4 border-droplet-tint-border pl-4 text-muted italic; }
+  .dr-prose :is(img, iframe) { @apply max-w-full rounded-field; }
+  .dr-prose img { @apply h-auto; }
+  .dr-prose iframe { @apply aspect-video h-auto w-full border-0; }
+  .dr-prose figcaption { @apply mt-1.5 text-center text-sm text-subtle; }
+  .dr-prose hr { @apply border-t-2 border-divider; }
+  .dr-prose :is(pre, code) { @apply rounded-md bg-canvas font-mono text-[0.9em]; }
+  .dr-prose pre { @apply overflow-x-auto p-3; }
+  .dr-prose code { @apply px-1 py-0.5; }
+  .dr-prose table { @apply block w-full overflow-x-auto text-sm; }
+  .dr-prose :is(th, td) { @apply border-b-2 border-divider px-3 py-2 text-left; }
+  .dr-prose th { @apply font-bold text-ink; }
+}
+
+/* Visual editor (Tiptap): placeholder text and selected media. */
+@layer components {
+  .tiptap p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none float-left h-0 text-placeholder;
+  }
+  .tiptap :is(img, [data-youtube-video]).ProseMirror-selectednode {
+    @apply outline-2 outline-offset-2 outline-droplet;
+  }
+  .tiptap table {
+    @apply table w-full border-collapse;
+  }
+}

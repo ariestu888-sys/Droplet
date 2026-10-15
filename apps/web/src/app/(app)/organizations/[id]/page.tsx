@@ -102,33 +102,52 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
           </section>
         </div>
 
-        <section aria-labelledby="details-heading" className="dr-card p-[22px]">
-          <h2 id="details-heading" className="mb-3 text-base font-bold">Details</h2>
-          <dl className="flex flex-col gap-3.5 text-sm">
-            <Detail icon={<MapPinIcon size={16} />} label="Location">
-              {location || <span className="text-subtle">Not set</span>}
-            </Detail>
-            <Detail icon={<GlobeIcon size={16} />} label="Website">
-              {org.websiteUrl ? (
-                <a href={org.websiteUrl} target="_blank" rel="noopener noreferrer" className="font-semibold break-all text-[#0369a1] hover:underline">
-                  {org.websiteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-                </a>
-              ) : (
-                <span className="text-subtle">Not set</span>
+        <div className="flex min-w-0 flex-col gap-4">
+          <section aria-labelledby="splash-heading" className="dr-card border-droplet-tint-border bg-droplet-tint p-[22px]">
+            <h2 id="splash-heading" className="mb-1 text-base font-bold">Splash page</h2>
+            <p className="mb-3 text-sm text-body">Your public page for visitors: no sign-in needed.</p>
+            <p className="mb-4 truncate rounded-field bg-surface px-3 py-2 font-mono text-xs text-muted">/o/{org.slug}</p>
+            <div className="flex flex-wrap gap-2">
+              <a href={`/o/${org.slug}`} target="_blank" rel="noopener" className="dr-btn-primary px-4 py-2.5 text-sm">
+                View ↗
+              </a>
+              {org.role !== "member" && (
+                <Link href={`/organizations/${org.id}/splash`} className="dr-btn-secondary px-4 py-2.5 text-sm">
+                  <PencilIcon size={15} />
+                  Edit
+                </Link>
               )}
-            </Detail>
-            <Detail icon={<ChatIcon size={16} />} label="Discord">
-              {org.discordUrl ? (
-                <a href={org.discordUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#4752c4] hover:underline">
-                  Join the Discord
-                </a>
-              ) : (
-                <span className="text-subtle">Not set</span>
-              )}
-            </Detail>
-          </dl>
-          <p className="mt-4 border-t-2 border-divider pt-3.5 text-xs text-subtle">Created {created}</p>
-        </section>
+            </div>
+          </section>
+
+          <section aria-labelledby="details-heading" className="dr-card p-[22px]">
+            <h2 id="details-heading" className="mb-3 text-base font-bold">Details</h2>
+            <dl className="flex flex-col gap-3.5 text-sm">
+              <Detail icon={<MapPinIcon size={16} />} label="Location">
+                {location || <span className="text-subtle">Not set</span>}
+              </Detail>
+              <Detail icon={<GlobeIcon size={16} />} label="Website">
+                {org.websiteUrl ? (
+                  <a href={org.websiteUrl} target="_blank" rel="noopener noreferrer" className="font-semibold break-all text-[#0369a1] hover:underline">
+                    {org.websiteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                  </a>
+                ) : (
+                  <span className="text-subtle">Not set</span>
+                )}
+              </Detail>
+              <Detail icon={<ChatIcon size={16} />} label="Discord">
+                {org.discordUrl ? (
+                  <a href={org.discordUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#4752c4] hover:underline">
+                    Join the Discord
+                  </a>
+                ) : (
+                  <span className="text-subtle">Not set</span>
+                )}
+              </Detail>
+            </dl>
+            <p className="mt-4 border-t-2 border-divider pt-3.5 text-xs text-subtle">Created {created}</p>
+          </section>
+        </div>
       </div>
     </>
   );

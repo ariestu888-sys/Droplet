@@ -10,6 +10,7 @@ import type {
   UpdateProfile,
 } from "./schemas";
 import type { CreateEvent, DropletEvent, EventList, EventTypeList } from "./events";
+import type { CreateSponsor, Sponsor, SponsorList, UpdateSplash, SplashContent, SplashPage } from "./splash";
 
 // A small typed client for the Droplet API, usable from the website (server
 // or browser) and from the mobile app.
@@ -95,6 +96,28 @@ export function createDropletApi({ baseUrl, getAccessToken, fetch: fetchImpl = f
     },
     eventTypes: {
       list: () => request<EventTypeList>("GET", "/v1/event-types"),
+    },
+    splash: {
+      /** An organization's public splash page. No sign-in needed. */
+      getPublic: (slug: string) =>
+        request<SplashPage>("GET", `/v1/public/organizations/${encodeURIComponent(slug)}/splash`),
+      get: (organizationId: string) =>
+        request<SplashContent>("GET", `/v1/organizations/${encodeURIComponent(organizationId)}/splash`),
+      update: (organizationId: string, input: UpdateSplash) =>
+        request<SplashContent>("PUT", `/v1/organizations/${encodeURIComponent(organizationId)}/splash`, input),
+    },
+    sponsors: {
+      list: (organizationId: string) =>
+        request<SponsorList>("GET", `/v1/organizations/${encodeURIComponent(organizationId)}/sponsors`),
+      create: (organizationId: string, input: CreateSponsor) =>
+        request<Sponsor>("POST", `/v1/organizations/${encodeURIComponent(organizationId)}/sponsors`, input),
+      delete: (id: string) => request<null>("DELETE", `/v1/sponsors/${encodeURIComponent(id)}`),
+      /** Upload or replace the sponsor's logo: a PNG, JPEG or WebP image up to 2 MB. */
+      uploadLogo: (id: string, file: Blob, filename = "logo") => {
+        const form = new FormData();
+        form.append("file", file, filename);
+        return request<Sponsor>("PUT", `/v1/sponsors/${encodeURIComponent(id)}/logo`, form);
+      },
     },
   };
 }

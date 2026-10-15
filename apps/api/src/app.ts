@@ -10,6 +10,7 @@ import { health } from "./routes/health";
 import { me } from "./routes/me";
 import { organizations } from "./routes/organizations";
 import { events } from "./routes/events";
+import { splash } from "./routes/splash";
 
 export const app = new OpenAPIHono({
   // Request validation failures use the same error shape as everything else.
@@ -28,7 +29,9 @@ app.use(secureHeaders());
 app.use(
   "/v1/*",
   cors({
-    origin: env.CORS_ORIGINS,
+    // Public endpoints can be called from any website; the rest only from ours.
+    origin: (origin, c) =>
+      c.req.path.startsWith("/v1/public/") ? "*" : env.CORS_ORIGINS.includes(origin) ? origin : null,
     allowHeaders: ["Authorization", "Content-Type"],
     allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     maxAge: 600,
@@ -41,6 +44,7 @@ v1.route("/", health);
 v1.route("/", me);
 v1.route("/", organizations);
 v1.route("/", events);
+v1.route("/", splash);
 app.route("/v1", v1);
 
 app.openAPIRegistry.registerComponent("securitySchemes", "Bearer", {

@@ -53,6 +53,8 @@ Schema changes live in `supabase/migrations/` as SQL files, applied in filename 
 - `20261015010000_event_optional_times.sql`: makes event start and end times optional (date-only events), replacing `create_event`.
 - `20261015020000_event_visibility.sql`: event visibility, chosen at creation. **Public**: the organization's members can see it and sign up. **Private**: members can see it; sign-up is by invitation. **Hidden**: only organizers (owners and admins) can see it, for events still being planned. Enforced by row-level security.
 - `20261016000000_update_delete_event.sql`: the `update_event` and `delete_event` functions (organizers only).
+- `20261016010000_welcome_pages.sql`: public splash pages (first called welcome pages): organizations' page HTML, `organization_sponsors` (organizers manage them), and a function anyone can call that returns the page, only ever including upcoming **public** events.
+- `20261016020000_rename_welcome_to_splash.sql`: renames those database objects to match: columns `splash_html` and `splash_updated_at`, functions `set_splash_html` and `organization_splash(slug)`.
 
 ## The API
 
@@ -73,6 +75,12 @@ Schema changes live in `supabase/migrations/` as SQL files, applied in filename 
 | GET | `/v1/events/{id}` | Bearer | One event (members of its organization) |
 | PUT | `/v1/events/{id}` | Bearer | Replace an event's details, including visibility (organizers) |
 | DELETE | `/v1/events/{id}` | Bearer | Delete an event permanently (organizers) |
+| GET | `/v1/public/organizations/{slug}/splash` | — | An organization's public splash page: details, splash HTML, upcoming public events, sponsors (callable from any website) |
+| GET | `/v1/organizations/{id}/splash` | Bearer | Splash content for editing (members) |
+| PUT | `/v1/organizations/{id}/splash` | Bearer | Replace the splash HTML (organizers); unsafe markup is removed when saved |
+| GET / POST | `/v1/organizations/{id}/sponsors` | Bearer | List sponsors (members) / add one (organizers) |
+| DELETE | `/v1/sponsors/{id}` | Bearer | Remove a sponsor (organizers) |
+| PUT | `/v1/sponsors/{id}/logo` | Bearer | Upload or replace a sponsor's logo (organizers) |
 | GET | `/v1/event-types` | Bearer | Event types: the starter list plus custom ones |
 
 The full, live specification is at `/v1/openapi.json`, with interactive docs at `/docs`.
@@ -99,6 +107,12 @@ Errors always look like `{ "error": { "code": "unauthorized", "message": "…" }
 - `src/proxy.ts`: refreshes the sign-in cookie on each request, and redirects signed-out visitors away from `/account`
 
 Cache Components is enabled, so anything that reads the session (via `cookies()`) must render inside a `<Suspense>` boundary. See `apps/web/node_modules/next/dist/docs/01-app/02-guides/authentication-with-cache-components.md` (or the root `node_modules`).
+
+### Splash pages
+
+Every organization has a public splash page at `/o/<slug>` (no sign-in needed), linked from its organization page: a header with its logo and links, the organizers' custom HTML, upcoming public events, and a sponsors footer. Organizers edit it at `/organizations/<id>/splash`.
+
+The custom HTML is sanitized by the API (`apps/api/src/lib/sanitize.ts`) before it's saved: scripts, event handlers, forms, `<style>` and positioning styles are removed; links, images, tables and YouTube/Vimeo embeds are kept.
 
 ### Accounts
 
