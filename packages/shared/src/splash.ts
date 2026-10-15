@@ -4,6 +4,28 @@ import { z } from "zod";
 
 export const SPLASH_HTML_MAX_LENGTH = 100_000;
 
+// "#1a2b3c": six-digit hex, lower case.
+export const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
+
+const hexColor = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(HEX_COLOR_PATTERN, "Use a six-digit hex color, like #0ea5e9.");
+
+export const SplashColorsSchema = z
+  .object({
+    primaryColor: hexColor.nullable().meta({
+      description: "Buttons, links, badges and the header tint. Null for Droplet's default.",
+      example: "#0ea5e9",
+    }),
+    secondaryColor: hexColor.nullable().meta({
+      description: "Accents and decoration. Null for Droplet's default.",
+      example: "#ff6b57",
+    }),
+  })
+  .meta({ id: "SplashColors" });
+
 export const SponsorSchema = z
   .object({
     id: z.uuid(),
@@ -49,7 +71,10 @@ export const SplashPageSchema = z
       zipcode: z.string().nullable(),
       websiteUrl: z.string().nullable(),
       discordUrl: z.string().nullable(),
+      instagramUrl: z.string().nullable(),
       logoUrl: z.string().nullable(),
+      primaryColor: z.string().nullable(),
+      secondaryColor: z.string().nullable(),
     }),
     html: z.string().nullable().meta({ description: "The organization's splash content, already sanitized." }),
     updatedAt: z.iso.datetime({ offset: true }).nullable(),
@@ -59,6 +84,39 @@ export const SplashPageSchema = z
     sponsors: z.array(SponsorSchema),
   })
   .meta({ id: "SplashPage" });
+
+export const EventSplashPageSchema = z
+  .object({
+    organization: z.object({
+      id: z.uuid(),
+      name: z.string(),
+      slug: z.string(),
+      logoUrl: z.string().nullable(),
+      primaryColor: z.string().nullable(),
+      secondaryColor: z.string().nullable(),
+    }),
+    event: z.object({
+      id: z.uuid(),
+      name: z.string(),
+      type: z.string(),
+      startsAt: z.iso.datetime({ offset: true }),
+      endsAt: z.iso.datetime({ offset: true }),
+      timezone: z.string(),
+      hasStartTime: z.boolean(),
+      hasEndTime: z.boolean(),
+      address: z.string().nullable(),
+      city: z.string().nullable(),
+      postalCode: z.string().nullable(),
+      country: z.string().nullable(),
+      capacity: z.number().int().nullable(),
+      websiteUrl: z.string().nullable(),
+      discordUrl: z.string().nullable(),
+    }),
+    html: z.string().nullable().meta({ description: "The event's splash content, already sanitized." }),
+    updatedAt: z.iso.datetime({ offset: true }).nullable(),
+    sponsors: z.array(SponsorSchema).meta({ description: "The organization's sponsors." }),
+  })
+  .meta({ id: "EventSplashPage" });
 
 export const SplashContentSchema = z
   .object({
@@ -87,3 +145,5 @@ export type SplashEvent = z.infer<typeof SplashEventSchema>;
 export type SplashPage = z.infer<typeof SplashPageSchema>;
 export type SplashContent = z.infer<typeof SplashContentSchema>;
 export type UpdateSplash = z.infer<typeof UpdateSplashSchema>;
+export type EventSplashPage = z.infer<typeof EventSplashPageSchema>;
+export type SplashColors = z.infer<typeof SplashColorsSchema>;

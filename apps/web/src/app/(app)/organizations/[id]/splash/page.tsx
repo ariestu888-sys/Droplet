@@ -7,7 +7,10 @@ import { DropletApiError, type Organization, type Sponsor, type SplashContent } 
 import { PageHeader } from "@/components/app-shell/app-shell";
 import { createServerApi } from "@/lib/api/server";
 import { isUuid } from "@/lib/uuid";
-import { SponsorsManager, SplashContentEditor } from "./splash-editor";
+import { SplashContentEditor } from "@/components/splash/splash-content-editor";
+import { saveSplashContent } from "./actions";
+import { SplashColorsForm } from "./splash-colors-form";
+import { SponsorsManager } from "./splash-editor";
 
 export const metadata: Metadata = { title: "Edit splash page · Droplet" };
 
@@ -90,7 +93,20 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
           <p className="mb-4 text-sm text-muted">
             Shown under your logo and name. Upcoming public events appear below it automatically.
           </p>
-          <SplashContentEditor organizationId={org.id} initialHtml={content.html ?? ""} />
+          <SplashContentEditor action={saveSplashContent.bind(null, org.id)} initialHtml={content.html ?? ""} />
+        </section>
+
+        <section aria-labelledby="colors-heading" className="dr-card">
+          <h2 id="colors-heading" className="mb-1 text-base font-bold">Colors</h2>
+          <p className="mb-4 text-sm text-muted">
+            Brand your splash page and your events&apos; splash pages. Text stays readable whatever you pick.
+          </p>
+          <SplashColorsForm
+            organizationId={org.id}
+            primaryColor={org.splashPrimaryColor}
+            secondaryColor={org.splashSecondaryColor}
+            canEdit={org.role === "owner"}
+          />
         </section>
 
         <section aria-labelledby="sponsors-heading" className="dr-card">

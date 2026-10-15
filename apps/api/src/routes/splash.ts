@@ -2,11 +2,14 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import {
   ApiErrorSchema,
   CreateSponsorSchema,
+  SplashColorsSchema,
+  EventSplashPageSchema,
   SponsorListSchema,
   SponsorSchema,
   UpdateSplashSchema,
   SplashContentSchema,
   SplashPageSchema,
+  type EventSplashPage,
   type OrganizationRole,
   type Sponsor,
   type SplashPage,
@@ -202,6 +205,105 @@ const uploadSponsorLogo = createRoute({
   },
 });
 
+const updateSplashColors = createRoute({
+  method: "put",
+  path: "/organizations/{id}/splash/colors",
+  tags: ["Splash pages"],
+  summary: "Set splash page colors for the organization and its events (owner only)",
+  description: "Send null for either color to go back to Droplet's default.",
+  security: [{ Bearer: [] }],
+  middleware: [requireUser] as const,
+  request: {
+    params: z.object({ id: uuidParam("id") }),
+    body: { required: true, content: { "application/json": { schema: SplashColorsSchema } } },
+  },
+  responses: {
+    200: { description: "The colors as saved", content: { "application/json": { schema: SplashColorsSchema } } },
+    400: errorResponse("Invalid color"),
+    401: errorResponse("Not signed in"),
+    403: errorResponse("Not the owner"),
+    404: errorResponse("No such organization"),
+  },
+});
+
+const getPublicEventSplash = createRoute({
+  method: "get",
+  path: "/public/organizations/{slug}/events/{eventId}/splash",
+  tags: ["Splash pages"],
+  summary: "A public event's splash page (no sign-in needed)",
+  description: "Only events with public visibility have a splash page; private and hidden events return 404.",
+  request: {
+    params: z.object({
+      slug: z
+        .string()
+        .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/i)
+        .openapi({ param: { name: "slug", in: "path" }, example: "northfield-esports-club" }),
+      eventId: uuidParam("eventId"),
+    }),
+  },
+  responses: {
+    200: { description: "The event's splash page", content: { "application/json": { schema: EventSplashPageSchema } } },
+    404: errorResponse("No such public event"),
+  },
+});
+
+const getEventSplash = createRoute({
+  method: "get",
+  path: "/events/{id}/splash",
+  tags: ["Splash pages"],
+  summary: "An event's splash content, for editing (members who can see the event)",
+  security: [{ Bearer: [] }],
+  middleware: [requireUser] as const,
+  request: { params: z.object({ id: uuidParam("id") }) },
+  responses: {
+    200: { description: "The splash content", content: { "application/json": { schema: SplashContentSchema } } },
+    401: errorResponse("Not signed in"),
+    404: errorResponse("No such event"),
+  },
+});
+
+const updateEventSplash = createRoute({
+  method: "put",
+  path: "/events/{id}/splash",
+  tags: ["Splash pages"],
+  summary: "Replace an event's splash content (organizers)",
+  description:
+    "The HTML is sanitized before it's saved, as for organization splash pages. The page is only visible to the public while the event's visibility is public.",
+  security: [{ Bearer: [] }],
+  middleware: [requireUser] as const,
+  request: {
+    params: z.object({ id: uuidParam("id") }),
+    body: { required: true, content: { "application/json": { schema: UpdateSplashSchema } } },
+  },
+  responses: {
+    200: { description: "The splash content as saved", content: { "application/json": { schema: SplashContentSchema } } },
+    400: errorResponse("Invalid input"),
+    401: errorResponse("Not signed in"),
+    403: errorResponse("Not an organizer"),
+    404: errorResponse("No such event"),
+  },
+});
+
+// The event's organization, if the signed-in user can see the event.
+async function eventOrganization(supabase: UserClient, eventId: string) {
+  const { data, error } = await supabase
+    .from("events")
+    .select("organization_id, splash_html, splash_updated_at")
+    .eq("id", eventId)
+    .maybeSingle<{ organization_id: string; splash_html: string | null; splash_updated_at: string | null }>();
+  if (error) throw databaseError(error);
+  if (!data) throw new ApiException(404, "not_found", "No such event.");
+  return data;
+}
+
+type EventSplashRow = Omit<EventSplashPage, "organization" | "sponsors"> & {
+  organization: Omit<EventSplashPage["organization"], "logoUrl"> & { logoPath: string | null };
+  sponsors: { id: string; name: string; websiteUrl: string | null; logoPath: string | null }[];
+};
+
+const toPublicSponsors = (sponsors: { id: string; name: string; websiteUrl: string | null; logoPath: string | null }[]) =>
+  sponsors.map((s) => ({ id: s.id, name: s.name, websiteUrl: s.websiteUrl, logoUrl: publicLogoUrl(s.logoPath) }));
+
 type SplashRow = Omit<SplashPage, "organization" | "sponsors"> & {
   organization: Omit<SplashPage["organization"], "logoUrl"> & { logoPath: string | null };
   sponsors: { id: string; name: string; websiteUrl: string | null; logoPath: string | null }[];
@@ -219,12 +321,7 @@ export const splash = new OpenAPIHono<{ Variables: AuthVariables }>()
     const page: SplashPage = {
       ...row,
       organization: { ...organization, logoUrl: publicLogoUrl(logoPath) },
-      sponsors: row.sponsors.map((s) => ({
-        id: s.id,
-        name: s.name,
-        websiteUrl: s.websiteUrl,
-        logoUrl: publicLogoUrl(s.logoPath),
-      })),
+      sponsors: toPublicSponsors(row.sponsors),
     };
     // Shared caches may keep it briefly; organizers' edits show within a minute.
     c.header("Cache-Control", "public, max-age=60");
@@ -316,4 +413,54 @@ export const splash = new OpenAPIHono<{ Variables: AuthVariables }>()
     if (sponsor.logo_path) await storage.remove([sponsor.logo_path]);
 
     return c.json(toSponsor({ ...sponsor, logo_path: path }), 200);
+  })
+  .openapi(updateSplashColors, async (c) => {
+    const { id } = c.req.valid("param");
+    const { primaryColor, secondaryColor } = c.req.valid("json");
+    const role = await roleIn(c.var.supabase, c.var.userId, id);
+    if (!role) throw new ApiException(404, "not_found", "No such organization.");
+    if (role !== "owner") throw new ApiException(403, "forbidden", "Only the owner can change splash page colors.");
+
+    const { error } = await c.var.supabase.rpc("set_splash_colors", {
+      org_id: id,
+      primary_color: primaryColor,
+      secondary_color: secondaryColor,
+    });
+    if (error) throw databaseError(error);
+    return c.json({ primaryColor, secondaryColor }, 200);
+  })
+  .openapi(getPublicEventSplash, async (c) => {
+    const { slug, eventId } = c.req.valid("param");
+    const { data, error } = await publicClient.rpc("event_splash", { org_slug: slug, target_event_id: eventId });
+    if (error) throw databaseError(error);
+    if (!data) throw new ApiException(404, "not_found", "No such event.");
+
+    const row = data as EventSplashRow;
+    const { logoPath, ...organization } = row.organization;
+    const page: EventSplashPage = {
+      ...row,
+      organization: { ...organization, logoUrl: publicLogoUrl(logoPath) },
+      sponsors: toPublicSponsors(row.sponsors),
+    };
+    c.header("Cache-Control", "public, max-age=60");
+    return c.json(page, 200);
+  })
+  .openapi(getEventSplash, async (c) => {
+    const { id } = c.req.valid("param");
+    const event = await eventOrganization(c.var.supabase, id);
+    return c.json({ html: event.splash_html, updatedAt: event.splash_updated_at }, 200);
+  })
+  .openapi(updateEventSplash, async (c) => {
+    const { id } = c.req.valid("param");
+    const { html } = c.req.valid("json");
+    const event = await eventOrganization(c.var.supabase, id);
+    await requireOrganizer(c.var.supabase, c.var.userId, event.organization_id);
+
+    const clean = sanitizeSplashHtml(html);
+    const { error } = await c.var.supabase.rpc("set_event_splash_html", { target_event_id: id, html: clean });
+    if (error) throw databaseError(error);
+    return c.json(
+      { html: clean || null, updatedAt: new Date().toISOString(), removedUnsafeContent: hasUnsafeContent(html) },
+      200,
+    );
   });

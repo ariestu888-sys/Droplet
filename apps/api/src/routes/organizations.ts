@@ -23,13 +23,16 @@ type OrganizationRow = {
   address: string | null;
   discord_url: string | null;
   website_url: string | null;
+  instagram_url: string | null;
   logo_path: string | null;
+  splash_primary_color: string | null;
+  splash_secondary_color: string | null;
   created_at: string;
   type: { name: string } | null;
 };
 
 const ORGANIZATION_COLUMNS =
-  "id, name, slug, description, zipcode, address, discord_url, website_url, logo_path, created_at, type:organization_types(name)";
+  "id, name, slug, description, zipcode, address, discord_url, website_url, instagram_url, logo_path, splash_primary_color, splash_secondary_color, created_at, type:organization_types(name)";
 
 const toOrganization = (row: OrganizationRow, role: OrganizationRole): Organization => ({
   id: row.id,
@@ -41,7 +44,10 @@ const toOrganization = (row: OrganizationRow, role: OrganizationRole): Organizat
   address: row.address,
   discordUrl: row.discord_url,
   websiteUrl: row.website_url,
+  instagramUrl: row.instagram_url,
   logoUrl: publicLogoUrl(row.logo_path),
+  splashPrimaryColor: row.splash_primary_color,
+  splashSecondaryColor: row.splash_secondary_color,
   role,
   createdAt: row.created_at,
 });
@@ -241,6 +247,7 @@ export const organizations = new OpenAPIHono<{ Variables: AuthVariables }>()
         org_address: input.address ?? null,
         org_discord_url: input.discordUrl ?? null,
         org_website_url: input.websiteUrl ?? null,
+        org_instagram_url: input.instagramUrl ?? null,
       })
       .single<{ id: string }>();
 
@@ -297,6 +304,7 @@ export const organizations = new OpenAPIHono<{ Variables: AuthVariables }>()
       org_address: pick("address"),
       org_discord_url: pick("discordUrl"),
       org_website_url: pick("websiteUrl"),
+      org_instagram_url: pick("instagramUrl"),
     });
     if (error) throw databaseError(error);
 

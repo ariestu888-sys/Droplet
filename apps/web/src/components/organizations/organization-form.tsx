@@ -86,6 +86,17 @@ export function OrganizationForm({
             <input {...props} type="url" placeholder="https://discord.gg/abc123" maxLength={200} defaultValue={values.discordUrl} />
           )}
         </FormField>
+        <FormField
+          name="instagramUrl"
+          label="Instagram"
+          optional
+          hint="Your profile link, or just your @handle."
+          error={errors.instagramUrl}
+        >
+          {(props) => (
+            <input {...props} type="text" placeholder="@northfieldesports" maxLength={200} autoCapitalize="none" spellCheck={false} defaultValue={values.instagramUrl} />
+          )}
+        </FormField>
       </FormSection>
 
       <FormSection title="Logo">

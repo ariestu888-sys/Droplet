@@ -137,6 +137,43 @@ async function EventDetails({ params }: { params: Promise<{ id: string }> }) {
           )}
         </Detail>
       </section>
+
+      {(event.canManage || event.visibility === "public") && (
+        <section
+          aria-labelledby="event-splash-heading"
+          className="dr-card mt-4 flex flex-wrap items-center justify-between gap-4 border-droplet-tint-border bg-droplet-tint p-[22px]"
+        >
+          <div className="min-w-0">
+            <h2 id="event-splash-heading" className="mb-1 text-base font-bold">Splash page</h2>
+            <p className="text-sm text-body">
+              {event.visibility === "public"
+                ? "A public page for this event: no sign-in needed."
+                : "Not visible to the public until this event is set to Public."}
+            </p>
+            {event.visibility === "public" && (
+              <p className="mt-2 truncate font-mono text-xs text-muted">/o/{event.organizationSlug}/events/{event.id}</p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {event.visibility === "public" && (
+              <a
+                href={`/o/${event.organizationSlug}/events/${event.id}`}
+                target="_blank"
+                rel="noopener"
+                className="dr-btn-primary px-4 py-2.5 text-sm"
+              >
+                View ↗
+              </a>
+            )}
+            {event.canManage && (
+              <Link href={`/events/${event.id}/splash`} className="dr-btn-secondary px-4 py-2.5 text-sm">
+                <PencilIcon size={15} />
+                Edit
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
     </>
   );
 }

@@ -3,12 +3,13 @@
 import { refresh } from "next/cache";
 import {
   CreateSponsorSchema,
+  SplashColorsSchema,
   DropletApiError,
   LOGO_MAX_BYTES,
   LOGO_TYPES,
-  SPLASH_HTML_MAX_LENGTH,
 } from "@droplet/shared";
 import { createServerApi } from "@/lib/api/server";
+import { checkSplashHtml, savedSplashState, splashErrorState, type SplashContentState } from "@/lib/splash-content";
 
 function describeError(err: unknown, action: string) {
   if (err instanceof DropletApiError) {
@@ -22,8 +23,6 @@ function describeError(err: unknown, action: string) {
   return `Couldn't ${action}. Please try again.`;
 }
 
-export type SplashContentState = { error?: string; message?: string; html?: string };
-
 // Bound to the organization's id by the page.
 export async function saveSplashContent(
   organizationId: string,
@@ -31,22 +30,14 @@ export async function saveSplashContent(
   formData: FormData,
 ): Promise<SplashContentState> {
   const html = String(formData.get("html") ?? "");
-  if (html.length > SPLASH_HTML_MAX_LENGTH) {
-    return { error: "That's too long. The splash page can be up to 100,000 characters.", html };
-  }
+  const invalid = checkSplashHtml(html);
+  if (invalid) return invalid;
 
   try {
     const api = await createServerApi();
-    const saved = await api.splash.update(organizationId, { html });
-    return {
-      html: saved.html ?? "",
-      // The API removes unsafe markup and says when it did.
-      message: saved.removedUnsafeContent
-        ? "Saved. Some parts were removed for safety (for example scripts, forms or embeds from unsupported sites)."
-        : "Saved.",
-    };
+    return savedSplashState(await api.splash.update(organizationId, { html }));
   } catch (err) {
-    return { error: describeError(err, "save the splash page"), html };
+    return splashErrorState(err, html);
   }
 }
 
@@ -91,4 +82,35 @@ export async function removeSponsor(sponsorId: string): Promise<{ error?: string
   }
   refresh();
   return {};
+}
+
+export type SplashColorsState = { error?: string; message?: string };
+
+// Bound to the organization's id by the page. Blank colors go back to the default.
+export async function saveSplashColors(
+  organizationId: string,
+  _prev: SplashColorsState,
+  formData: FormData,
+): Promise<SplashColorsState> {
+  const read = (key: string) => {
+    const value = String(formData.get(key) ?? "").trim().toLowerCase();
+    return value === "" ? null : value;
+  };
+  const input = { primaryColor: read("primaryColor"), secondaryColor: read("secondaryColor") };
+  const parsed = SplashColorsSchema.safeParse(input);
+  if (!parsed.success) return { error: "Use six-digit hex colors, like #0ea5e9." };
+
+  try {
+    const api = await createServerApi();
+    await api.splash.updateColors(organizationId, parsed.data);
+  } catch (err) {
+    if (err instanceof DropletApiError && err.status === 403) return { error: "Only the owner can change splash page colors." };
+    if (err instanceof DropletApiError && err.code === "not_set_up") {
+      return { error: "Splash colors aren't set up in the database yet. Run the latest migration in supabase/migrations." };
+    }
+    return { error: "Couldn't save the colors. Please try again." };
+  }
+
+  refresh();
+  return { message: parsed.data.primaryColor || parsed.data.secondaryColor ? "Colors saved." : "Back to Droplet's default colors." };
 }

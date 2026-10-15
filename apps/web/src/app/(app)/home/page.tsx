@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { DropletApiError, type Organization } from "@droplet/shared";
 import { PageHeader } from "@/components/app-shell/app-shell";
-import { BuildingPlusIcon, ChatIcon, GlobeIcon, MapPinIcon, PlusIcon, UsersIcon } from "@/components/icons";
+import { BuildingPlusIcon, ChatIcon, GlobeIcon, InstagramIcon, MapPinIcon, PlusIcon, UsersIcon } from "@/components/icons";
 import { OrgLogo } from "@/components/org-logo";
 import { createServerApi } from "@/lib/api/server";
 
@@ -125,6 +125,12 @@ async function OrganizationList() {
                 <a href={org.discordUrl} target="_blank" rel="noopener noreferrer" className="relative z-10 dr-badge bg-[#eef0ff] text-[#4752c4] hover:underline">
                   <ChatIcon size={13} />
                   Discord
+                </a>
+              )}
+              {org.instagramUrl && (
+                <a href={org.instagramUrl} target="_blank" rel="noopener noreferrer" className="relative z-10 dr-badge bg-[#fdeef6] text-[#a1286f] hover:underline">
+                  <InstagramIcon size={13} />
+                  Instagram
                 </a>
               )}
             </div>

@@ -5,9 +5,10 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { DropletApiError, type DropletEvent, type Organization } from "@droplet/shared";
 import { EventList } from "@/components/events/event-list";
-import { ChatIcon, GlobeIcon, MapPinIcon, PencilIcon, PlusIcon, UsersIcon } from "@/components/icons";
+import { ChatIcon, GlobeIcon, InstagramIcon, MapPinIcon, PencilIcon, PlusIcon, UsersIcon } from "@/components/icons";
 import { OrgLogo } from "@/components/org-logo";
 import { createServerApi } from "@/lib/api/server";
+import { instagramHandle } from "@/lib/instagram";
 import { isUuid } from "@/lib/uuid";
 
 export const metadata: Metadata = { title: "Organization · Droplet" };
@@ -139,6 +140,15 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
                 {org.discordUrl ? (
                   <a href={org.discordUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#4752c4] hover:underline">
                     Join the Discord
+                  </a>
+                ) : (
+                  <span className="text-subtle">Not set</span>
+                )}
+              </Detail>
+              <Detail icon={<InstagramIcon size={16} />} label="Instagram">
+                {org.instagramUrl ? (
+                  <a href={org.instagramUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#c13584] hover:underline">
+                    {instagramHandle(org.instagramUrl)}
                   </a>
                 ) : (
                   <span className="text-subtle">Not set</span>

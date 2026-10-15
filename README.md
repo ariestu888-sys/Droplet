@@ -55,6 +55,9 @@ Schema changes live in `supabase/migrations/` as SQL files, applied in filename 
 - `20261016000000_update_delete_event.sql`: the `update_event` and `delete_event` functions (organizers only).
 - `20261016010000_welcome_pages.sql`: public splash pages (first called welcome pages): organizations' page HTML, `organization_sponsors` (organizers manage them), and a function anyone can call that returns the page, only ever including upcoming **public** events.
 - `20261016020000_rename_welcome_to_splash.sql`: renames those database objects to match: columns `splash_html` and `splash_updated_at`, functions `set_splash_html` and `organization_splash(slug)`.
+- `20261016030000_event_splash_pages.sql`: splash pages for events: `events.splash_html`, `set_event_splash_html` (organizers), and `event_splash(slug, event_id)`, which anyone can call and which returns nothing unless the event is **public**.
+- `20261016040000_splash_colors.sql`: primary and secondary splash colors per organization (`set_splash_colors`, owner only), included in both public splash functions.
+- `20261017000000_organization_instagram.sql`: an optional Instagram link per organization (`instagram_url`, stored as a full profile URL), accepted by `create_organization` and `update_organization` and shown on its splash page. Forms accept `@handle` too (`normalizeInstagramUrl` in `packages/shared`).
 
 ## The API
 
@@ -78,6 +81,10 @@ Schema changes live in `supabase/migrations/` as SQL files, applied in filename 
 | GET | `/v1/public/organizations/{slug}/splash` | — | An organization's public splash page: details, splash HTML, upcoming public events, sponsors (callable from any website) |
 | GET | `/v1/organizations/{id}/splash` | Bearer | Splash content for editing (members) |
 | PUT | `/v1/organizations/{id}/splash` | Bearer | Replace the splash HTML (organizers); unsafe markup is removed when saved |
+| PUT | `/v1/organizations/{id}/splash/colors` | Bearer | Set splash page primary/secondary colors (owner only; `null` for the default) |
+| GET | `/v1/public/organizations/{slug}/events/{eventId}/splash` | — | A public event's splash page (private and hidden events return 404) |
+| GET | `/v1/events/{id}/splash` | Bearer | An event's splash content for editing |
+| PUT | `/v1/events/{id}/splash` | Bearer | Replace an event's splash HTML (organizers); sanitized when saved |
 | GET / POST | `/v1/organizations/{id}/sponsors` | Bearer | List sponsors (members) / add one (organizers) |
 | DELETE | `/v1/sponsors/{id}` | Bearer | Remove a sponsor (organizers) |
 | PUT | `/v1/sponsors/{id}/logo` | Bearer | Upload or replace a sponsor's logo (organizers) |
@@ -111,6 +118,10 @@ Cache Components is enabled, so anything that reads the session (via `cookies()`
 ### Splash pages
 
 Every organization has a public splash page at `/o/<slug>` (no sign-in needed), linked from its organization page: a header with its logo and links, the organizers' custom HTML, upcoming public events, and a sponsors footer. Organizers edit it at `/organizations/<id>/splash`.
+
+Each **public** event also has a splash page at `/o/<slug>/events/<event-id>` (linked from the organization's splash page and the event's page): its name, dates, links, organizer-written content, an event details sidebar, and the organization's sponsors. Organizers edit it at `/events/<id>/splash`; private and hidden events' splash pages can be prepared but aren't visible until the event is public.
+
+The organization's owner can set a primary and secondary color for all its splash pages (Colors, in the splash editor). They're applied as CSS variables over Droplet's brand colors (`apps/web/src/lib/splash-theme.ts`), with link and button text colors derived to keep at least 4.5:1 contrast.
 
 The custom HTML is sanitized by the API (`apps/api/src/lib/sanitize.ts`) before it's saved: scripts, event handlers, forms, `<style>` and positioning styles are removed; links, images, tables and YouTube/Vimeo embeds are kept.
 

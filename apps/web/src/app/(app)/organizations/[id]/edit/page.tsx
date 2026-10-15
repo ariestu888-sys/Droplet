@@ -74,6 +74,7 @@ async function EditForm({ params }: { params: Promise<{ id: string }> }) {
             zipcode: org.zipcode ?? "",
             address: org.address ?? "",
             discordUrl: org.discordUrl ?? "",
+            instagramUrl: org.instagramUrl ?? "",
             websiteUrl: org.websiteUrl ?? "",
           }}
           currentLogoUrl={org.logoUrl}

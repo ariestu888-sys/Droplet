@@ -47,6 +47,23 @@ export const OrganizationRoleSchema = z.enum(["owner", "admin", "member"]).meta(
 export const ZIPCODE_PATTERN = /^\d{5}(-\d{4})?$/;
 export const DISCORD_INVITE_PATTERN =
   /^https:\/\/(www\.)?(discord\.gg|discord\.com\/invite|discordapp\.com\/invite)\/[A-Za-z0-9-]+\/?$/i;
+// A full Instagram profile link, as stored.
+export const INSTAGRAM_URL_PATTERN = /^https:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]{1,30}\/?$/i;
+
+/**
+ * Turns what people type for an Instagram account ("@northfield",
+ * "northfield", "instagram.com/northfield", a full link with tracking
+ * parameters) into "https://www.instagram.com/northfield/". Returns the
+ * input unchanged if it isn't recognizable, so validation can reject it.
+ */
+export function normalizeInstagramUrl(input: string): string {
+  const value = input.trim();
+  const handle =
+    value.match(/^@?([A-Za-z0-9._]{1,30})$/)?.[1] ??
+    value.match(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})\/?(?:[?#].*)?$/i)?.[1];
+  return handle ? `https://www.instagram.com/${handle}/` : value;
+}
+
 export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 export const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 
@@ -73,7 +90,10 @@ export const OrganizationSchema = z
     address: z.string().nullable().meta({ example: "1200 Cedar Ave, Riverton" }),
     discordUrl: z.string().nullable().meta({ example: "https://discord.gg/northfield" }),
     websiteUrl: z.string().nullable().meta({ example: "https://northfieldesports.example" }),
+    instagramUrl: z.string().nullable().meta({ example: "https://www.instagram.com/northfieldesports/" }),
     logoUrl: z.string().nullable().meta({ description: "Public URL of the logo image." }),
+    splashPrimaryColor: z.string().nullable().meta({ description: "Splash page primary color, or null for the default." }),
+    splashSecondaryColor: z.string().nullable().meta({ description: "Splash page secondary color, or null for the default." }),
     role: OrganizationRoleSchema.meta({ description: "The signed-in user's role in this organization." }),
     createdAt: z.iso.datetime({ offset: true }),
   })
@@ -100,6 +120,11 @@ const organizationFields = {
     .trim()
     .regex(DISCORD_INVITE_PATTERN, "Enter a Discord invite link, like https://discord.gg/abc123."),
   websiteUrl: z.httpUrl("Enter a full web address, starting with https://.").max(300),
+  instagramUrl: z
+    .string()
+    .trim()
+    .regex(INSTAGRAM_URL_PATTERN, "Enter an Instagram link or @handle, like @northfieldesports.")
+    .meta({ description: "Full profile link. Use normalizeInstagramUrl to accept @handles.", example: "https://www.instagram.com/northfieldesports/" }),
 };
 
 export const CreateOrganizationSchema = z
@@ -111,6 +136,7 @@ export const CreateOrganizationSchema = z
     address: organizationFields.address.optional(),
     discordUrl: organizationFields.discordUrl.optional(),
     websiteUrl: organizationFields.websiteUrl.optional(),
+    instagramUrl: organizationFields.instagramUrl.optional(),
   })
   .meta({ id: "CreateOrganization" });
 
@@ -124,6 +150,7 @@ export const UpdateOrganizationSchema = z
     address: organizationFields.address.nullable().optional(),
     discordUrl: organizationFields.discordUrl.nullable().optional(),
     websiteUrl: organizationFields.websiteUrl.nullable().optional(),
+    instagramUrl: organizationFields.instagramUrl.nullable().optional(),
   })
   .meta({ id: "UpdateOrganization" });
 

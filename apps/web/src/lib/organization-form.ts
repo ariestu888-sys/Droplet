@@ -3,6 +3,7 @@ import {
   DropletApiError,
   LOGO_MAX_BYTES,
   LOGO_TYPES,
+  normalizeInstagramUrl,
   type CreateOrganization,
 } from "@droplet/shared";
 import { CUSTOM_TYPE } from "./form-constants";
@@ -41,6 +42,7 @@ export function parseOrganizationForm(formData: FormData) {
     address: text(formData, "address"),
     discordUrl: text(formData, "discordUrl"),
     websiteUrl: text(formData, "websiteUrl"),
+    instagramUrl: text(formData, "instagramUrl"),
   };
 
   const fieldErrors: NonNullable<OrganizationFormState["fieldErrors"]> = {};
@@ -52,6 +54,8 @@ export function parseOrganizationForm(formData: FormData) {
     address: values.address || undefined,
     discordUrl: values.discordUrl || undefined,
     websiteUrl: values.websiteUrl || undefined,
+    // "@handle" and other forms become a full profile link.
+    instagramUrl: values.instagramUrl ? normalizeInstagramUrl(values.instagramUrl) : undefined,
   });
   if (!parsed.success) {
     for (const issue of parsed.error.issues) {

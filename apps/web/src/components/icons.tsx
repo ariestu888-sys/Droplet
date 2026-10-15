@@ -71,6 +71,14 @@ export const TicketIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const InstagramIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <path d="M17.5 6.5h.01" />
+  </Icon>
+);
+
 export const LockIcon = (p: IconProps) => (
   <Icon {...p}>
     <rect x="4" y="11" width="16" height="10" rx="2" />

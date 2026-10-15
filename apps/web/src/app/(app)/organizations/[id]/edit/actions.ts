@@ -26,6 +26,7 @@ export async function updateOrganization(
       zipcode: input.zipcode ?? null,
       address: input.address ?? null,
       discordUrl: input.discordUrl ?? null,
+      instagramUrl: input.instagramUrl ?? null,
       websiteUrl: input.websiteUrl ?? null,
     });
 

@@ -34,16 +34,17 @@ type EventRow = {
   website_url: string | null;
   created_at: string;
   type: { name: string } | null;
-  organization: { name: string } | null;
+  organization: { name: string; slug: string } | null;
 };
 
 const EVENT_COLUMNS =
-  "id, organization_id, name, starts_at, ends_at, timezone, has_start_time, has_end_time, visibility, address, city, postal_code, country, capacity, discord_url, website_url, created_at, type:event_types(name), organization:organizations(name)";
+  "id, organization_id, name, starts_at, ends_at, timezone, has_start_time, has_end_time, visibility, address, city, postal_code, country, capacity, discord_url, website_url, created_at, type:event_types(name), organization:organizations(name, slug)";
 
 const toEvent = (row: EventRow, role: OrganizationRole): DropletEvent => ({
   id: row.id,
   organizationId: row.organization_id,
   organizationName: row.organization?.name ?? "",
+  organizationSlug: row.organization?.slug ?? "",
   name: row.name,
   type: row.type?.name ?? "Other",
   startsAt: row.starts_at,

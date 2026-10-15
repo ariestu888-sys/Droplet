@@ -4,11 +4,13 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { createDropletApi, DropletApiError, type SplashEvent, type SplashPage } from "@droplet/shared";
-import { DropletLogo } from "@/components/droplet-logo";
-import { CalendarIcon, ChatIcon, GlobeIcon, MapPinIcon } from "@/components/icons";
+import { CalendarIcon, GlobeIcon, MapPinIcon } from "@/components/icons";
+import { SocialLinks } from "@/components/splash/social-links";
 import { OrgLogo } from "@/components/org-logo";
+import { SponsorsFooter } from "@/components/splash/sponsors-footer";
 import { countryName } from "@/lib/countries";
 import { eventDateBadge, formatEventRange } from "@/lib/event-dates";
+import { splashThemeStyle } from "@/lib/splash-theme";
 
 // An organization's public splash page. No sign-in needed.
 
@@ -46,7 +48,7 @@ async function Splash({ params }: { params: Promise<{ slug: string }> }) {
   const { organization: org } = page;
 
   return (
-    <>
+    <div className="dr-splash flex flex-1 flex-col" style={splashThemeStyle(org)}>
       <SplashHeader org={org} />
 
       {/* Content, with upcoming events in a right-hand sidebar (below it on narrow screens). */}
@@ -65,26 +67,34 @@ async function Splash({ params }: { params: Promise<{ slug: string }> }) {
           </article>
         )}
 
-        <UpcomingEvents events={page.upcomingEvents} />
+        <UpcomingEvents organizationSlug={org.slug} events={page.upcomingEvents} />
       </main>
 
-      <SplashFooter page={page} />
-    </>
+      <SponsorsFooter organizationName={org.name} sponsors={page.sponsors} />
+    </div>
   );
 }
 
 function SplashHeader({ org }: { org: SplashPage["organization"] }) {
   const location = [org.address, org.zipcode].filter(Boolean).join(", ");
+  const hasSocials = Boolean(org.discordUrl || org.instagramUrl);
   return (
     <header className="relative overflow-hidden bg-sky">
       <div aria-hidden className="absolute -top-10 right-[6%] size-48 rounded-full bg-coral opacity-[0.08]" />
       <div aria-hidden className="absolute bottom-6 left-[4%] size-28 rounded-full bg-droplet opacity-[0.08]" />
       <div aria-hidden className="absolute top-16 left-[18%] size-3 rounded-full bg-spark opacity-70" />
 
-      <div className="relative mx-auto flex w-full max-w-[1120px] flex-wrap items-center gap-6 px-6 py-14 max-sm:px-4 max-sm:py-10">
+      <div
+        className={`relative mx-auto flex w-full max-w-[1120px] flex-wrap items-center gap-6 px-6 py-14 max-sm:px-4 max-sm:py-10 ${
+          hasSocials ? "max-sm:pt-20" : ""
+        }`}
+      >
+        {/* Social accounts, top right of the banner. */}
+        <SocialLinks organizationName={org.name} links={org} className="absolute top-5 right-6 max-sm:top-4 max-sm:right-4" />
+
         <OrgLogo name={org.name} logoUrl={org.logoUrl} size={96} className="rounded-sheet shadow-sheet" />
-        <div className="min-w-0 flex-1">
-          <span className="dr-badge mb-2 bg-surface text-[#0369a1]">{org.type}</span>
+        <div className={`min-w-0 flex-1 ${hasSocials ? "sm:pr-28" : ""}`}>
+          <span className="dr-badge mb-2 bg-surface text-(--splash-link)">{org.type}</span>
           <h1 className="text-[40px] leading-tight font-bold tracking-[-0.015em] break-words max-sm:text-[32px]">{org.name}</h1>
           {location && (
             <p className="mt-2 flex items-center gap-1.5 text-sm text-muted">
@@ -92,25 +102,12 @@ function SplashHeader({ org }: { org: SplashPage["organization"] }) {
               {location}
             </p>
           )}
-          {(org.websiteUrl || org.discordUrl) && (
+          {org.websiteUrl && (
             <div className="mt-4 flex flex-wrap gap-2.5">
-              {org.websiteUrl && (
-                <a href={org.websiteUrl} target="_blank" rel="noopener noreferrer" className="dr-btn-secondary px-5 py-2.5 text-sm">
-                  <GlobeIcon size={16} />
-                  Website
-                </a>
-              )}
-              {org.discordUrl && (
-                <a
-                  href={org.discordUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="dr-btn-primary bg-[#5865f2] px-5 py-2.5 text-sm shadow-[0_8px_20px_-6px_#5865f2] hover:shadow-[0_14px_26px_-6px_#5865f2]"
-                >
-                  <ChatIcon size={16} />
-                  Join our Discord
-                </a>
-              )}
+              <a href={org.websiteUrl} target="_blank" rel="noopener noreferrer" className="dr-btn-secondary px-5 py-2.5 text-sm">
+                <GlobeIcon size={16} />
+                Website
+              </a>
             </div>
           )}
         </div>
@@ -120,7 +117,7 @@ function SplashHeader({ org }: { org: SplashPage["organization"] }) {
 }
 
 // Right-hand sidebar on wide screens: stays in view while the content scrolls.
-function UpcomingEvents({ events }: { events: SplashEvent[] }) {
+function UpcomingEvents({ organizationSlug, events }: { organizationSlug: string; events: SplashEvent[] }) {
   return (
     <aside aria-labelledby="upcoming-heading" className="lg:sticky lg:top-6">
       <section className="rounded-sheet border-2 border-line-soft bg-canvas p-5">
@@ -139,7 +136,11 @@ function UpcomingEvents({ events }: { events: SplashEvent[] }) {
               const badge = eventDateBadge(event.startsAt, event.timezone);
               const place = [event.city, event.country ? countryName(event.country) : null].filter(Boolean).join(", ");
               return (
-                <li key={event.id} className="flex gap-3 rounded-field border-2 border-line-soft bg-surface p-3">
+                <li key={event.id}>
+                  <Link
+                    href={`/o/${organizationSlug}/events/${event.id}`}
+                    className="flex gap-3 rounded-field border-2 border-line-soft bg-surface p-3 transition-colors hover:border-droplet-tint-border hover:bg-hover"
+                  >
                   <div className="flex w-12 shrink-0 flex-col items-center self-start rounded-field bg-droplet-tint py-1.5 text-droplet">
                     <span className="text-[10.5px] font-bold tracking-[0.06em]">{badge.month}</span>
                     <span className="font-display text-xl leading-none font-bold">{badge.day}</span>
@@ -155,6 +156,7 @@ function UpcomingEvents({ events }: { events: SplashEvent[] }) {
                       </p>
                     )}
                   </div>
+                  </Link>
                 </li>
               );
             })}
@@ -163,64 +165,10 @@ function UpcomingEvents({ events }: { events: SplashEvent[] }) {
 
         {events.length > 0 && (
           <p className="mt-4 text-center text-xs text-muted">
-            <Link href="/login" className="font-semibold text-[#0369a1] hover:underline">Sign in</Link> to see details and sign up.
+            <Link href="/login" className="font-semibold text-(--splash-link) hover:underline">Sign in</Link> to sign up for events.
           </p>
         )}
       </section>
     </aside>
-  );
-}
-
-function SplashFooter({ page }: { page: SplashPage }) {
-  return (
-    <footer className="border-t-2 border-line-soft bg-canvas">
-      {page.sponsors.length > 0 && (
-        <section aria-labelledby="sponsors-heading" className="mx-auto w-full max-w-[1120px] px-6 pt-10 pb-6 max-sm:px-4">
-          <h2 id="sponsors-heading" className="mb-1 text-center text-xl font-bold">Thank you to our sponsors</h2>
-          <p className="mb-6 text-center text-sm text-muted">{page.organization.name} is made possible by</p>
-          <ul className="flex flex-wrap items-stretch justify-center gap-3">
-            {page.sponsors.map((sponsor) => {
-              const content = (
-                <>
-                  {sponsor.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- logos come from Supabase Storage
-                    <img src={sponsor.logoUrl} alt="" className="h-14 w-auto max-w-[160px] object-contain" />
-                  ) : (
-                    <span aria-hidden className="flex size-14 items-center justify-center rounded-field bg-coral-tint font-display text-xl font-bold text-coral">
-                      {sponsor.name[0]?.toUpperCase()}
-                    </span>
-                  )}
-                  <span className="text-sm font-semibold text-ink-soft">{sponsor.name}</span>
-                </>
-              );
-              const box =
-                "flex min-w-[150px] flex-col items-center gap-2 rounded-card border-2 border-line-soft bg-surface px-5 py-4 text-center";
-              return (
-                <li key={sponsor.id}>
-                  {sponsor.websiteUrl ? (
-                    <a
-                      href={sponsor.websiteUrl}
-                      target="_blank"
-                      rel="sponsored noopener noreferrer"
-                      className={`${box} transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-card-hover`}
-                    >
-                      {content}
-                    </a>
-                  ) : (
-                    <div className={box}>{content}</div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-      <div className="flex items-center justify-center gap-2 px-6 py-6 text-xs text-subtle">
-        Powered by
-        <Link href="/" className="text-ink hover:opacity-80" aria-label="Droplet">
-          <DropletLogo size={18} />
-        </Link>
-      </div>
-    </footer>
   );
 }

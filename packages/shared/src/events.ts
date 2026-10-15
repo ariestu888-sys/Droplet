@@ -71,6 +71,7 @@ export const EventSchema = z
     id: z.uuid(),
     organizationId: z.uuid(),
     organizationName: z.string().meta({ example: "Northfield Esports Club" }),
+    organizationSlug: z.string().meta({ example: "northfield-esports-club" }),
     name: z.string().meta({ example: "Autumn Invitational" }),
     type: z.string().meta({ example: "Tournament" }),
     startsAt: z.iso.datetime({ offset: true }).meta({

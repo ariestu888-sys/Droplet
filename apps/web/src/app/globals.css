@@ -188,3 +188,18 @@
     @apply table w-full border-collapse;
   }
 }
+
+/* Public splash pages. Organizations can set their own colors, which override
+   --color-droplet, --color-coral and these (see lib/splash-theme.ts). */
+@layer components {
+  .dr-splash {
+    --splash-link: #0369a1;
+    --splash-on-primary: #ffffff;
+  }
+  .dr-splash .dr-btn-primary {
+    color: var(--splash-on-primary);
+  }
+  .dr-splash .dr-prose a {
+    color: var(--splash-link);
+  }
+}

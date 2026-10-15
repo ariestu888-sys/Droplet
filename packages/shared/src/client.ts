@@ -10,7 +10,16 @@ import type {
   UpdateProfile,
 } from "./schemas";
 import type { CreateEvent, DropletEvent, EventList, EventTypeList } from "./events";
-import type { CreateSponsor, Sponsor, SponsorList, UpdateSplash, SplashContent, SplashPage } from "./splash";
+import type {
+  CreateSponsor,
+  EventSplashPage,
+  Sponsor,
+  SponsorList,
+  SplashColors,
+  SplashContent,
+  SplashPage,
+  UpdateSplash,
+} from "./splash";
 
 // A small typed client for the Droplet API, usable from the website (server
 // or browser) and from the mobile app.
@@ -105,6 +114,19 @@ export function createDropletApi({ baseUrl, getAccessToken, fetch: fetchImpl = f
         request<SplashContent>("GET", `/v1/organizations/${encodeURIComponent(organizationId)}/splash`),
       update: (organizationId: string, input: UpdateSplash) =>
         request<SplashContent>("PUT", `/v1/organizations/${encodeURIComponent(organizationId)}/splash`, input),
+      /** Splash page colors for the organization and its events (owner only). */
+      updateColors: (organizationId: string, input: SplashColors) =>
+        request<SplashColors>("PUT", `/v1/organizations/${encodeURIComponent(organizationId)}/splash/colors`, input),
+      /** A public event's splash page. No sign-in needed. */
+      getPublicEvent: (organizationSlug: string, eventId: string) =>
+        request<EventSplashPage>(
+          "GET",
+          `/v1/public/organizations/${encodeURIComponent(organizationSlug)}/events/${encodeURIComponent(eventId)}/splash`,
+        ),
+      getEvent: (eventId: string) =>
+        request<SplashContent>("GET", `/v1/events/${encodeURIComponent(eventId)}/splash`),
+      updateEvent: (eventId: string, input: UpdateSplash) =>
+        request<SplashContent>("PUT", `/v1/events/${encodeURIComponent(eventId)}/splash`, input),
     },
     sponsors: {
       list: (organizationId: string) =>
