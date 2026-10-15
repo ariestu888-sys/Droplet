@@ -13,6 +13,7 @@ import {
   type OrganizationRole,
   type Sponsor,
   type SplashPage,
+  isOrganizer,
 } from "@droplet/shared";
 import { requireUser, type AuthVariables } from "../middleware/auth";
 import { ApiException, databaseError } from "../lib/errors";
@@ -57,7 +58,7 @@ async function roleIn(supabase: UserClient, userId: string, organizationId: stri
 async function requireOrganizer(supabase: UserClient, userId: string, organizationId: string) {
   const role = await roleIn(supabase, userId, organizationId);
   if (!role) throw new ApiException(404, "not_found", "No such organization.");
-  if (role === "member") throw new ApiException(403, "forbidden", "Only organizers can change this.");
+  if (!isOrganizer(role)) throw new ApiException(403, "forbidden", "Only organizers can change this.");
 }
 
 async function findSponsor(supabase: UserClient, id: string) {

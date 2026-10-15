@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import { signInWithGoogle } from "@/app/auth/actions";
+import { NextField } from "./next-field";
 
 function GoogleSubmit({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -25,6 +26,7 @@ function GoogleSubmit({ label }: { label: string }) {
 export function GoogleButton({ label = "Continue with Google" }: { label?: string }) {
   return (
     <form action={signInWithGoogle}>
+      <NextField />
       <GoogleSubmit label={label} />
     </form>
   );

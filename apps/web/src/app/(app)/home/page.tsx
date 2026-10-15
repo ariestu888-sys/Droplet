@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { DropletApiError, type Organization } from "@droplet/shared";
+import { DropletApiError, ROLE_LABELS, type Organization } from "@droplet/shared";
 import { PageHeader } from "@/components/app-shell/app-shell";
 import { BuildingPlusIcon, ChatIcon, GlobeIcon, InstagramIcon, MapPinIcon, PlusIcon, UsersIcon } from "@/components/icons";
 import { OrgLogo } from "@/components/org-logo";
@@ -113,7 +113,7 @@ async function OrganizationList() {
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <span className="dr-badge bg-success-tint text-[#11743a]">
                 <UsersIcon size={13} />
-                {org.role === "owner" ? "Owner" : org.role === "admin" ? "Admin" : "Member"}
+                {ROLE_LABELS[org.role]}
               </span>
               {org.websiteUrl && (
                 <a href={org.websiteUrl} target="_blank" rel="noopener noreferrer" className="relative z-10 dr-badge bg-droplet-tint text-[#0369a1] hover:underline">

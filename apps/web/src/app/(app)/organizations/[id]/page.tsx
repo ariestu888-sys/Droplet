@@ -3,13 +3,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { DropletApiError, type DropletEvent, type Organization } from "@droplet/shared";
+import { DropletApiError, isOrganizer, ROLE_LABELS, type DropletEvent, type Organization } from "@droplet/shared";
 import { EventList } from "@/components/events/event-list";
 import { ChatIcon, GlobeIcon, InstagramIcon, MapPinIcon, PencilIcon, PlusIcon, UsersIcon } from "@/components/icons";
 import { OrgLogo } from "@/components/org-logo";
 import { createServerApi } from "@/lib/api/server";
 import { instagramHandle } from "@/lib/instagram";
 import { isUuid } from "@/lib/uuid";
+import { LeaveOrganizationButton } from "./leave-organization-button";
 
 export const metadata: Metadata = { title: "Organization · Droplet" };
 
@@ -47,7 +48,8 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
   }
 
   const location = [org.address, org.zipcode].filter(Boolean).join(", ");
-  const roleLabel = org.role === "owner" ? "Owner" : org.role === "admin" ? "Admin" : "Member";
+  const organizer = isOrganizer(org.role);
+  const roleLabel = ROLE_LABELS[org.role].toLowerCase();
   const created = new Date(org.createdAt).toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -64,15 +66,21 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
             <span className="dr-badge bg-droplet-tint text-[#0369a1]">{org.type}</span>
             <span className="dr-badge bg-success-tint text-[#11743a]">
               <UsersIcon size={13} />
-              You&apos;re {org.role === "member" ? "a member" : `an ${roleLabel.toLowerCase()}`}
+              You&apos;re {/^[aeiou]/.test(roleLabel) ? "an" : "a"} {roleLabel}
             </span>
           </div>
         </div>
-        {org.role !== "member" && (
-          <Link href={`/organizations/${org.id}/edit`} className="dr-btn-secondary px-5 py-2.5 text-sm">
-            <PencilIcon size={16} />
-            Edit
-          </Link>
+        {organizer && (
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/organizations/${org.id}/members`} className="dr-btn-secondary px-5 py-2.5 text-sm">
+              <UsersIcon size={16} />
+              Members
+            </Link>
+            <Link href={`/organizations/${org.id}/edit`} className="dr-btn-secondary px-5 py-2.5 text-sm">
+              <PencilIcon size={16} />
+              Edit
+            </Link>
+          </div>
         )}
       </header>
 
@@ -90,7 +98,7 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
           <section aria-labelledby="events-heading" className="dr-card p-[22px]">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 id="events-heading" className="text-base font-bold">Events</h2>
-              {org.role !== "member" && (
+              {organizer && (
                 <Link href={`/organizations/${org.id}/events/new`} className="dr-btn-primary px-4 py-2.5 text-sm">
                   <PlusIcon size={16} />
                   Create event
@@ -98,7 +106,7 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
               )}
             </div>
             <Suspense fallback={<p className="text-sm text-subtle">Loading events…</p>}>
-              <OrganizationEvents organizationId={org.id} canManage={org.role !== "member"} />
+              <OrganizationEvents organizationId={org.id} canManage={organizer} />
             </Suspense>
           </section>
         </div>
@@ -112,7 +120,7 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
               <a href={`/o/${org.slug}`} target="_blank" rel="noopener" className="dr-btn-primary px-4 py-2.5 text-sm">
                 View ↗
               </a>
-              {org.role !== "member" && (
+              {organizer && (
                 <Link href={`/organizations/${org.id}/splash`} className="dr-btn-secondary px-4 py-2.5 text-sm">
                   <PencilIcon size={15} />
                   Edit
@@ -157,6 +165,7 @@ async function OrganizationDetails({ params }: { params: Promise<{ id: string }>
             </dl>
             <p className="mt-4 border-t-2 border-divider pt-3.5 text-xs text-subtle">Created {created}</p>
           </section>
+          {org.role !== "owner" && <LeaveOrganizationButton organizationId={org.id} organizationName={org.name} />}
         </div>
       </div>
     </>

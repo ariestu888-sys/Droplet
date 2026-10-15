@@ -8,6 +8,7 @@ import {
   type DropletEvent,
   type EventVisibility,
   type OrganizationRole,
+  isOrganizer,
 } from "@droplet/shared";
 import { requireUser, type AuthVariables } from "../middleware/auth";
 import { ApiException, databaseError } from "../lib/errors";
@@ -60,7 +61,7 @@ const toEvent = (row: EventRow, role: OrganizationRole): DropletEvent => ({
   capacity: row.capacity,
   discordUrl: row.discord_url,
   websiteUrl: row.website_url,
-  canManage: role === "owner" || role === "admin",
+  canManage: isOrganizer(role),
   createdAt: row.created_at,
 });
 
@@ -252,7 +253,7 @@ export const events = new OpenAPIHono<{ Variables: AuthVariables }>()
 
     const role = await roleIn(c.var.supabase, c.var.userId, id);
     if (!role) throw new ApiException(404, "not_found", "No such organization.");
-    if (role === "member") throw new ApiException(403, "forbidden", "Only owners and admins can create events.");
+    if (!isOrganizer(role)) throw new ApiException(403, "forbidden", "Only owners and admins can create events.");
 
     const { data, error } = await c.var.supabase
       .rpc("create_event", { org_id: id, ...eventParams(input) })

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { DropletApiError, type Organization, type OrganizationType } from "@droplet/shared";
+import { DropletApiError, isOrganizer, type Organization, type OrganizationType } from "@droplet/shared";
 import { PageHeader } from "@/components/app-shell/app-shell";
 import { OrganizationForm } from "@/components/organizations/organization-form";
 import { createServerApi } from "@/lib/api/server";
@@ -49,7 +49,7 @@ async function EditForm({ params }: { params: Promise<{ id: string }> }) {
     </Link>
   );
 
-  if (org.role === "member") {
+  if (!isOrganizer(org.role)) {
     return (
       <>
         {back}

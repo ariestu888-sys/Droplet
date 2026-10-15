@@ -11,6 +11,8 @@ import { me } from "./routes/me";
 import { organizations } from "./routes/organizations";
 import { events } from "./routes/events";
 import { splash } from "./routes/splash";
+import { members } from "./routes/members";
+import { joinLinks } from "./routes/join-links";
 
 export const app = new OpenAPIHono({
   // Request validation failures use the same error shape as everything else.
@@ -45,6 +47,8 @@ v1.route("/", me);
 v1.route("/", organizations);
 v1.route("/", events);
 v1.route("/", splash);
+v1.route("/", members);
+v1.route("/", joinLinks);
 app.route("/v1", v1);
 
 app.openAPIRegistry.registerComponent("securitySchemes", "Bearer", {

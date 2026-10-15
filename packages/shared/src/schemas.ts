@@ -41,7 +41,48 @@ export const UpdateProfileSchema = z
   })
   .meta({ id: "UpdateProfile" });
 
-export const OrganizationRoleSchema = z.enum(["owner", "admin", "member"]).meta({ id: "OrganizationRole" });
+// Roles in an organization, most to least access. Owners and admins are
+// "organizers". Keep in step with the database (supabase/migrations).
+export const ORGANIZATION_ROLES = ["owner", "admin", "booster", "member", "subscriber"] as const;
+
+export const OrganizationRoleSchema = z.enum(ORGANIZATION_ROLES).meta({
+  id: "OrganizationRole",
+  description:
+    "owner: overall ownership. admin: edits pages and events, manages members below admin. booster: volunteer helper. member: takes part, sees public and private events. subscriber: follows updates, sees public events.",
+});
+
+export type OrganizationRoleName = (typeof ORGANIZATION_ROLES)[number];
+
+export const ROLE_LABELS: Record<OrganizationRoleName, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  booster: "Booster",
+  member: "Member",
+  subscriber: "Subscriber",
+};
+
+export const ROLE_DESCRIPTIONS: Record<OrganizationRoleName, string> = {
+  owner: "Overall ownership of the organization",
+  admin: "Edits the organization's pages and events, and manages members",
+  booster: "A volunteer helper for the organization",
+  member: "Takes part in activities and gets updates",
+  subscriber: "Follows the organization's updates",
+};
+
+/** Owners and admins: can edit the organization's pages and events. */
+export const isOrganizer = (role: OrganizationRoleName | null | undefined) => role === "owner" || role === "admin";
+
+/** Whether someone with `actor` may give or take away `target` (matches the database's can_manage_role). */
+export function canManageRole(actor: OrganizationRoleName | null | undefined, target: OrganizationRoleName) {
+  if (target === "owner") return false;
+  if (actor === "owner") return true;
+  if (actor === "admin") return target === "booster" || target === "member" || target === "subscriber";
+  return false;
+}
+
+/** Roles someone with `actor` can assign, most access first. */
+export const assignableRoles = (actor: OrganizationRoleName | null | undefined) =>
+  ORGANIZATION_ROLES.filter((r) => canManageRole(actor, r));
 
 // Field rules, shared so forms can check input the same way the API does.
 export const ZIPCODE_PATTERN = /^\d{5}(-\d{4})?$/;

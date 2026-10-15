@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { safeNextPath } from "@/lib/safe-next-path";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
@@ -9,8 +10,11 @@ export type AuthFormState = {
   message?: string;
 };
 
-// Where to send people after they sign in.
-const AFTER_AUTH_PATH = "/home";
+// Where to send people after they sign in: the form's "next" page (e.g. an
+// invitation they were accepting), if it's on this site, else Home.
+const afterAuthPath = (formData?: FormData) => safeNextPath(String(formData?.get("next") ?? "") || null, "/home");
+
+const callbackUrl = async (next: string) => `${await getOrigin()}/auth/callback?next=${encodeURIComponent(next)}`;
 
 async function getOrigin() {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
@@ -33,13 +37,14 @@ export async function signUp(
     return { error: "Your password needs at least 8 characters." };
   }
 
+  const next = afterAuthPath(formData);
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { full_name: fullName },
-      emailRedirectTo: `${await getOrigin()}/auth/callback?next=${AFTER_AUTH_PATH}`,
+      emailRedirectTo: await callbackUrl(next),
     },
   });
 
@@ -52,7 +57,7 @@ export async function signUp(
   }
 
   // Email confirmation turned off in Supabase: the user is signed in already.
-  if (data.session) redirect(AFTER_AUTH_PATH);
+  if (data.session) redirect(next);
 
   return {
     message: `Almost there! We sent a confirmation link to ${email}. Open it to finish creating your account.`,
@@ -82,15 +87,15 @@ export async function logIn(
     };
   }
 
-  redirect(AFTER_AUTH_PATH);
+  redirect(afterAuthPath(formData));
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(formData: FormData) {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${await getOrigin()}/auth/callback?next=${AFTER_AUTH_PATH}`,
+      redirectTo: await callbackUrl(afterAuthPath(formData)),
       // Always show Google's account chooser, so people signed in to Google
       // see which account they're using instead of being signed in silently.
       queryParams: { prompt: "select_account" },
@@ -102,8 +107,11 @@ export async function signInWithGoogle() {
   redirect(data.url);
 }
 
-export async function signOut() {
+// With a "next" page in the form (e.g. an invitation), goes to log in and
+// returns there afterwards; otherwise to the public home page.
+export async function signOut(formData?: FormData) {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/");
+  const next = formData?.get("next");
+  redirect(next ? `/login?next=${encodeURIComponent(safeNextPath(String(next)))}` : "/");
 }

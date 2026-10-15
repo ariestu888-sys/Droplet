@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { DropletApiError, type EventType, type Organization } from "@droplet/shared";
+import { DropletApiError, isOrganizer, type EventType, type Organization } from "@droplet/shared";
 import { PageHeader } from "@/components/app-shell/app-shell";
 import { EventForm } from "@/components/events/event-form";
 import { createServerApi } from "@/lib/api/server";
@@ -53,7 +53,7 @@ async function NewEventForm({ params }: { params: Promise<{ id: string }> }) {
     </Link>
   );
 
-  if (org.role === "member") {
+  if (!isOrganizer(org.role)) {
     return (
       <>
         {back}

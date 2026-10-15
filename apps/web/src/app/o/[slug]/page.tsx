@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { createDropletApi, DropletApiError, type SplashEvent, type SplashPage } from "@droplet/shared";
 import { CalendarIcon, GlobeIcon, MapPinIcon } from "@/components/icons";
 import { SocialLinks } from "@/components/splash/social-links";
+import { SubscribeButton } from "./subscribe-button";
 import { OrgLogo } from "@/components/org-logo";
 import { SponsorsFooter } from "@/components/splash/sponsors-footer";
 import { countryName } from "@/lib/countries";
@@ -102,14 +103,15 @@ function SplashHeader({ org }: { org: SplashPage["organization"] }) {
               {location}
             </p>
           )}
-          {org.websiteUrl && (
-            <div className="mt-4 flex flex-wrap gap-2.5">
+          <div className="mt-4 flex flex-wrap items-start gap-2.5">
+            <SubscribeButton organizationId={org.id} slug={org.slug} organizationName={org.name} />
+            {org.websiteUrl && (
               <a href={org.websiteUrl} target="_blank" rel="noopener noreferrer" className="dr-btn-secondary px-5 py-2.5 text-sm">
                 <GlobeIcon size={16} />
                 Website
               </a>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </header>

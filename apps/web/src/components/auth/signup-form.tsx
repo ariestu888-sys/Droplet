@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { signUp, type AuthFormState } from "@/app/auth/actions";
 import { FormNotice } from "./auth-shell";
+import { NextField } from "./next-field";
 
 export function SignUpForm() {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
@@ -14,6 +15,7 @@ export function SignUpForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <NextField />
       <div>
         <label className="dr-field-label" htmlFor="fullName">Full name</label>
         <input className="dr-input" id="fullName" name="fullName" type="text" placeholder="Jamie Rivera" autoComplete="name" required />

@@ -20,6 +20,20 @@ import type {
   SplashPage,
   UpdateSplash,
 } from "./splash";
+import type {
+  AcceptInvitationResult,
+  CreateInvitation,
+  CreateInvitationResult,
+  InvitationDetails,
+  InvitationList,
+  CreateJoinLink,
+  JoinLink,
+  JoinLinkDetails,
+  JoinLinkList,
+  MemberList,
+  SubscribeResult,
+  UpdateMemberRole,
+} from "./members";
 
 // A small typed client for the Droplet API, usable from the website (server
 // or browser) and from the mobile app.
@@ -105,6 +119,59 @@ export function createDropletApi({ baseUrl, getAccessToken, fetch: fetchImpl = f
     },
     eventTypes: {
       list: () => request<EventTypeList>("GET", "/v1/event-types"),
+    },
+    members: {
+      /** Members with names, emails and roles (organizers only). */
+      list: (organizationId: string) =>
+        request<MemberList>("GET", `/v1/organizations/${encodeURIComponent(organizationId)}/members`),
+      setRole: (organizationId: string, userId: string, input: UpdateMemberRole) =>
+        request<null>(
+          "PATCH",
+          `/v1/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
+          input,
+        ),
+      remove: (organizationId: string, userId: string) =>
+        request<null>(
+          "DELETE",
+          `/v1/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
+        ),
+      /** Leave an organization (anyone but the owner). */
+      leave: (organizationId: string) =>
+        request<null>("POST", `/v1/organizations/${encodeURIComponent(organizationId)}/leave`),
+      /** Subscribe to an organization's updates; existing members keep their role. */
+      subscribe: (organizationId: string) =>
+        request<SubscribeResult>("POST", `/v1/organizations/${encodeURIComponent(organizationId)}/subscribe`),
+    },
+    invitations: {
+      /** Pending invitations (organizers only). */
+      list: (organizationId: string) =>
+        request<InvitationList>("GET", `/v1/organizations/${encodeURIComponent(organizationId)}/invitations`),
+      create: (organizationId: string, input: CreateInvitation) =>
+        request<CreateInvitationResult>(
+          "POST",
+          `/v1/organizations/${encodeURIComponent(organizationId)}/invitations`,
+          input,
+        ),
+      revoke: (invitationId: string) => request<null>("DELETE", `/v1/invitations/${encodeURIComponent(invitationId)}`),
+      /** What an invite link shows. No sign-in needed. */
+      getPublic: (token: string) =>
+        request<InvitationDetails>("GET", `/v1/public/invitations/${encodeURIComponent(token)}`),
+      accept: (token: string) =>
+        request<AcceptInvitationResult>("POST", `/v1/invitations/${encodeURIComponent(token)}/accept`),
+    },
+    joinLinks: {
+      /** Active join links, at most one per role (organizers). */
+      list: (organizationId: string) =>
+        request<JoinLinkList>("GET", `/v1/organizations/${encodeURIComponent(organizationId)}/join-links`),
+      /** Creates the link for a role, replacing any active one. */
+      create: (organizationId: string, input: CreateJoinLink) =>
+        request<JoinLink>("POST", `/v1/organizations/${encodeURIComponent(organizationId)}/join-links`, input),
+      revoke: (linkId: string) => request<null>("DELETE", `/v1/join-links/${encodeURIComponent(linkId)}`),
+      /** What a join link shows. No sign-in needed. */
+      getPublic: (token: string) =>
+        request<JoinLinkDetails>("GET", `/v1/public/join-links/${encodeURIComponent(token)}`),
+      accept: (token: string) =>
+        request<AcceptInvitationResult>("POST", `/v1/join-links/${encodeURIComponent(token)}/accept`),
     },
     splash: {
       /** An organization's public splash page. No sign-in needed. */

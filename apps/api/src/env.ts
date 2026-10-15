@@ -10,6 +10,12 @@ const EnvSchema = z.object({
     .string()
     .default("http://localhost:3001")
     .transform((s) => s.split(",").map((o) => o.trim()).filter(Boolean)),
+  // The website's address, for links in emails (e.g. invitations).
+  PUBLIC_SITE_URL: z.url().default("http://localhost:3001"),
+  // Optional: send emails through Resend (https://resend.com). Without a key,
+  // invitations are still created and organizers share the link themselves.
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default("Droplet <onboarding@resend.dev>"),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

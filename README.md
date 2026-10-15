@@ -58,6 +58,8 @@ Schema changes live in `supabase/migrations/` as SQL files, applied in filename 
 - `20261016030000_event_splash_pages.sql`: splash pages for events: `events.splash_html`, `set_event_splash_html` (organizers), and `event_splash(slug, event_id)`, which anyone can call and which returns nothing unless the event is **public**.
 - `20261016040000_splash_colors.sql`: primary and secondary splash colors per organization (`set_splash_colors`, owner only), included in both public splash functions.
 - `20261017000000_organization_instagram.sql`: an optional Instagram link per organization (`instagram_url`, stored as a full profile URL), accepted by `create_organization` and `update_organization` and shown on its splash page. Forms accept `@handle` too (`normalizeInstagramUrl` in `packages/shared`).
+- `20261017010000_roles_and_invitations.sql`: five roles (owner, admin, booster, member, subscriber); events visible by role (hidden: organizers; private: not subscribers); `organization_invitations`; and functions to invite, accept, list members, change roles, remove, leave and subscribe.
+- `20261017020000_join_links.sql`: `organization_join_links` (shareable links to join as a booster, member or subscriber; at most one active link per role) and functions to create, turn off, look up and accept them.
 
 ## The API
 
@@ -88,6 +90,18 @@ Schema changes live in `supabase/migrations/` as SQL files, applied in filename 
 | GET / POST | `/v1/organizations/{id}/sponsors` | Bearer | List sponsors (members) / add one (organizers) |
 | DELETE | `/v1/sponsors/{id}` | Bearer | Remove a sponsor (organizers) |
 | PUT | `/v1/sponsors/{id}/logo` | Bearer | Upload or replace a sponsor's logo (organizers) |
+| GET | `/v1/organizations/{id}/members` | Bearer | Members with names, emails and roles (organizers) |
+| PATCH / DELETE | `/v1/organizations/{id}/members/{userId}` | Bearer | Change a member's role / remove them (owners: anyone but the owner; admins: boosters, members, subscribers) |
+| POST | `/v1/organizations/{id}/leave` | Bearer | Leave an organization (not the owner) |
+| POST | `/v1/organizations/{id}/subscribe` | Bearer | Subscribe to updates (existing members keep their role) |
+| GET / POST | `/v1/organizations/{id}/invitations` | Bearer | Pending invitations / invite by email with a role (emailed if Resend is configured) |
+| DELETE | `/v1/invitations/{id}` | Bearer | Cancel an invitation |
+| GET | `/v1/public/invitations/{token}` | — | What an invite link shows |
+| POST | `/v1/invitations/{token}/accept` | Bearer | Accept (the signed-in email must match) |
+| GET / POST | `/v1/organizations/{id}/join-links` | Bearer | Active join links / create one for a role, replacing that role's current link (organizers) |
+| DELETE | `/v1/join-links/{id}` | Bearer | Turn a join link off (organizers) |
+| GET | `/v1/public/join-links/{token}` | — | What a join link shows (organization and role) |
+| POST | `/v1/join-links/{token}/accept` | Bearer | Join through a link (raises an existing member's role if the link's is higher, never lowers it) |
 | GET | `/v1/event-types` | Bearer | Event types: the starter list plus custom ones |
 
 The full, live specification is at `/v1/openapi.json`, with interactive docs at `/docs`.
@@ -114,6 +128,22 @@ Errors always look like `{ "error": { "code": "unauthorized", "message": "…" }
 - `src/proxy.ts`: refreshes the sign-in cookie on each request, and redirects signed-out visitors away from `/account`
 
 Cache Components is enabled, so anything that reads the session (via `cookies()`) must render inside a `<Suspense>` boundary. See `apps/web/node_modules/next/dist/docs/01-app/02-guides/authentication-with-cache-components.md` (or the root `node_modules`).
+
+### Roles, members and invitations
+
+| Role | Can |
+| --- | --- |
+| Owner | Everything, including splash colors and adding or removing admins |
+| Admin | Edit pages, events and splash pages; see hidden events; invite and manage boosters, members and subscribers |
+| Booster | Volunteer helper; sees public and private events |
+| Member | Takes part; sees public and private events |
+| Subscriber | Follows updates; sees public events only |
+
+Organizers manage people at `/organizations/<id>/members`: invite by email with a role, see pending invitations (copy the link, cancel), change roles and remove people. An invite link (`/invite/<token>`) expires after 14 days and only the invited email's account can accept it; people who need to sign in first are brought back to it. Anyone signed in can subscribe from an organization's splash page, and anyone but the owner can leave.
+
+**Join links and QR codes.** For people you don't have emails for, organizers can create a shareable join link for the booster, member or subscriber role on the Members page, at most one active link per role. Each link has a QR code (generated in the browser) to show or download for flyers and posters. Anyone who opens `/join/<token>` signs in or signs up and joins with that role; someone already in the organization keeps a higher role. Resetting a link replaces it and turning it off stops it working at once.
+
+Invitation emails are sent through [Resend](https://resend.com) when `RESEND_API_KEY` is set in `apps/api/.env` (see `.env.example`); without it, organizers copy the link from the Members page and send it themselves.
 
 ### Splash pages
 

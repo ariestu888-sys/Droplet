@@ -23,7 +23,8 @@ export function databaseError(error: PostgrestError): ApiException {
   if (["PGRST202", "PGRST205", "42P01", "42883"].includes(error.code)) {
     return new ApiException(503, "not_set_up", "This feature isn't set up in the database yet.");
   }
-  if (error.code === "42501") return new ApiException(403, "forbidden", "You don't have permission to do that.");
+  if (error.code === "42501") return new ApiException(403, "forbidden", error.message || "You don't have permission to do that.");
+  if (error.code === "P0002") return new ApiException(404, "not_found", error.message || "Not found.");
   if (error.code === "22023" || error.code === "23514") {
     return new ApiException(400, "invalid_request", error.message);
   }

@@ -8,6 +8,7 @@ import {
   UpdateOrganizationSchema,
   type Organization,
   type OrganizationRole,
+  isOrganizer,
 } from "@droplet/shared";
 import { requireUser, type AuthVariables } from "../middleware/auth";
 import { ApiException, databaseError } from "../lib/errors";
@@ -176,7 +177,7 @@ const removeLogo = createRoute({
 async function findManageableOrganization(supabase: UserClient, userId: string, id: string) {
   const organization = await findOrganization(supabase, userId, id);
   if (!organization) throw new ApiException(404, "not_found", "No such organization.");
-  if (organization.role === "member") {
+  if (!isOrganizer(organization.role)) {
     throw new ApiException(403, "forbidden", "Only owners and admins can change this organization.");
   }
   return organization;
